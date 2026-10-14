@@ -1,0 +1,9 @@
+{
+  "name": "daily-report-system",
+  "private": true,
+  "description": "Daily Report System: app (site/) and Cloudflare Pages Functions API (functions/)",
+  "dependencies": {
+    "@simplewebauthn/server": "10.0.1"
+  },
+  "type": "module"
+}

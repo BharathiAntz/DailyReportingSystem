@@ -1,9 +1,10 @@
 #!/bin/sh
-# One-time setup on Cloudflare: creates the team database and its tables, then deploys.
+# One-time setup on Cloudflare: team database, tables, one-time PINs for every staff member, then deploy.
 # Opens a browser the first time to sign in to Cloudflare.
 set -e
 cd "$(dirname "$0")"
 W="npx --yes wrangler@4"
+npm install --silent
 if grep -q '00000000-0000-0000-0000-000000000000' wrangler.toml; then
   echo "Creating the team database…"
   OUT=$($W d1 create animal-drs 2>&1) || { echo "$OUT"; exit 1; }
@@ -12,8 +13,10 @@ if grep -q '00000000-0000-0000-0000-000000000000' wrangler.toml; then
   sed -i '' "s/00000000-0000-0000-0000-000000000000/$ID/" wrangler.toml
 fi
 echo "Creating tables…"
-$W d1 execute animal-drs --remote --file schema.sql
+$W d1 execute animal-drs --remote --file schema.sql --yes
+node tools/build-staff.mjs
+node tools/issue-pins.mjs
+$W d1 execute animal-drs --remote --file .secrets/pins.sql --yes
 ./deploy.sh
 echo ""
-echo "Optional: require a team code so only your staff can read and send reports:"
-echo "  $W pages secret put TEAM_CODE --project-name animal-drs"
+echo "One-time PINs for every staff member are in .secrets/ (keep them private; hand them out in person)."

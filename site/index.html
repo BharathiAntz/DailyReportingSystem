@@ -1,0 +1,1318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>Daily Reports · Animal facility</title>
+<!-- DRS Lite — daily reporting for animal-facility field staff. Look: GRC v2 component kit (app/tokens.css, app/type.css, kit/kit.css).
+     One file, no build, works offline. Data stays on this device (localStorage) until the ANTS connector is wired in (see ANTS below). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daily Reports">
+<style>
+/* ---------- tokens: the GRC v2 colour + spacing set this app uses (values from app/tokens.css) ---------- */
+:root {
+  --md3-primary: #37BD69; --md3-on-primary: #FFFFFF; --md3-on-primary-container: #1F515B;
+  --md3-secondary-container: #AFEFEB; --md3-on-secondary-container: #1F415B;
+  --md3-tertiary: #FA6140; --md3-tertiary-container: #FFBDA8; --md3-on-tertiary-container: #250E01;
+  --md3-error: #E93353; --md3-error-container: #FFD3D3; --md3-on-error-container: #4A0415;
+  --md3-background: #EFF5F2; --md3-on-background: #E1F9ED; --md3-surface: #F2FFF8; --md3-on-surface: #006D35;
+  --md3-surface-variant: #DAE7DF; --md3-on-surface-variant: #44544A; --md3-outline: #839D8D; --md3-outline-variant: #C3CEC7;
+  --md3-displaybg-primary: #E8F4F2; --md3-notes: #FCF4AE; --md3-moderate-secondary: #E4B819; --md3-neutral-primary: #000000;
+  --md3-notes-a40: rgba(252, 244, 174, .4);
+  --md3-secondary-container-a30: rgba(175, 239, 235, .3);
+  --md3-tertiary-container-a30: rgba(255, 189, 168, .3);
+  --md3-on-primary-container-a60: rgba(31, 81, 91, .6);
+  --md3-neutral-primary-a20: rgba(0, 0, 0, .2);
+  --black-08: rgba(0, 0, 0, .08);
+  --sp-2: 2px; --sp-4: 4px; --sp-8: 8px; --sp-12: 12px; --sp-16: 16px; --sp-24: 24px; --sp-32: 32px;
+  --k-gutter: var(--sp-16);
+  --tap: 48px; /* field use: every tap target is at least 48px, a step up from the kit's 44 */
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--md3-background); color: var(--md3-on-surface-variant); }
+button { font-family: inherit; font-size: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }
+
+/* ---------- type: the Antz text styles (app/type.css) ---------- */
+.t-stat-title   { font-size: 28px; font-weight: 600; }
+.t-major-title  { font-size: 24px; font-weight: 600; }
+.t-medium-medium{ font-size: 20px; font-weight: 500; }
+.t-minor-title  { font-size: 16px; font-weight: 600; }
+.t-minor-medium { font-size: 16px; font-weight: 500; }
+.t-minor-regular{ font-size: 16px; font-weight: 400; }
+.t-body-title   { font-size: 14px; font-weight: 600; }
+.t-body-medium  { font-size: 14px; font-weight: 500; letter-spacing: .1px; }
+.t-body-regular { font-size: 14px; font-weight: 400; }
+.t-subtext-title{ font-size: 12px; font-weight: 600; }
+.t-subtext-regular { font-size: 12px; font-weight: 400; }
+.t-small        { font-size: 10px; font-weight: 500; }
+
+/* ---------- shell ---------- */
+.app { max-width: 760px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+main { flex: 1; padding: 0 var(--k-gutter) calc(96px + env(safe-area-inset-bottom)); }
+.stack { display: flex; flex-direction: column; gap: var(--sp-12); }
+.gap24 { display: flex; flex-direction: column; gap: var(--sp-24); padding-top: var(--sp-16); }
+.sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); margin: 0 0 var(--sp-8); }
+.quiet { color: var(--md3-on-surface-variant); }
+.muted { color: var(--md3-outline); }
+.svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.svg--sm { width: 20px; height: 20px; }
+
+/* C-07 page header band */
+.k-ph { display: flex; align-items: center; gap: var(--sp-12); margin: 0 calc(-1 * var(--k-gutter)); padding: calc(var(--sp-24) + env(safe-area-inset-top)) var(--k-gutter) var(--sp-16);
+  background: var(--md3-on-primary); border-bottom: 1px solid var(--md3-surface-variant); }
+.k-ph__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.k-ph__line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4) var(--sp-8); }
+.k-ph__line > span + span::before { content: '·'; margin-right: var(--sp-8); }
+.k-ph__back { width: var(--tap); height: var(--tap); flex: none; margin-left: calc(-1 * var(--sp-12)); display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--md3-on-surface); cursor: pointer; }
+.k-ph--sticky { position: sticky; top: 0; z-index: 5; }
+.who { display: flex; align-items: center; gap: var(--sp-8); height: var(--tap); padding: 0 var(--sp-12) 0 var(--sp-4); border: 1px solid var(--md3-outline-variant); border-radius: 999px; background: var(--md3-on-primary); cursor: pointer; flex: none; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--md3-on-primary-container); color: var(--md3-on-primary); flex: none; }
+
+/* buttons (N-01) */
+.k-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); height: var(--tap); padding: 0 var(--sp-16); border-radius: 8px;
+  border: 1px solid var(--md3-outline-variant); background: var(--md3-on-primary); color: var(--md3-on-surface-variant); white-space: nowrap; cursor: pointer; }
+.k-btn--primary { background: var(--md3-on-primary-container); border-color: var(--md3-on-primary-container); color: var(--md3-on-primary); }
+.k-btn--brand { background: var(--md3-primary); border-color: var(--md3-primary); color: var(--md3-on-primary); }
+.k-btn--danger { color: var(--md3-error); }
+.k-btn--alert { background: var(--md3-error); border-color: var(--md3-error); color: var(--md3-on-error, #fff); }
+.k-btn--ghost { background: transparent; border-color: transparent; }
+.k-btn--block { width: 100%; }
+.k-btn--lg { height: 56px; }
+.k-btn:disabled { background: var(--md3-surface-variant); border-color: var(--md3-surface-variant); color: var(--md3-on-surface-variant); cursor: not-allowed; }
+.k-btn--dashed { border-style: dashed; border-color: var(--md3-outline); background: transparent; color: var(--md3-on-surface); }
+
+/* C-19 pills · C-21 tags */
+.k-pill { display: inline-flex; align-items: center; gap: var(--sp-4); height: 28px; padding: 0 var(--sp-12); border-radius: 999px; white-space: nowrap; background: var(--md3-displaybg-primary); color: var(--md3-on-surface-variant); }
+.k-pill--ok { background: var(--md3-on-background); color: var(--md3-on-surface); }
+.k-pill--info { background: var(--md3-secondary-container-a30); color: var(--md3-on-secondary-container); }
+.k-pill--warn { background: var(--md3-notes-a40); color: var(--md3-on-tertiary-container); }
+.k-pill--bad { background: var(--md3-error-container); color: var(--md3-on-error-container); }
+.k-tag { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--sp-8); border-radius: 4px; background: var(--md3-displaybg-primary); color: var(--md3-on-surface-variant); white-space: nowrap; }
+.k-tag--safety { background: var(--md3-notes-a40); color: var(--md3-on-tertiary-container); }
+
+/* C-10 row card */
+.k-rowcard { display: flex; align-items: center; gap: var(--sp-16); width: 100%; min-height: 72px; padding: var(--sp-16); border: 1px solid var(--md3-surface-variant); border-radius: 8px;
+  background: var(--md3-on-primary); color: var(--md3-on-surface-variant); text-align: left; cursor: pointer; }
+.k-rowcard:active { background: var(--md3-surface); }
+.k-rowcard__ico { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--md3-displaybg-primary); color: var(--md3-on-primary-container); }
+.k-rowcard__ico--bad { background: var(--md3-error-container); color: var(--md3-on-error-container); }
+.k-rowcard__ico--ok { background: var(--md3-on-background); color: var(--md3-on-surface); }
+.k-rowcard__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.k-rowcard__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rowline { display: flex; align-items: center; gap: var(--sp-8); min-width: 0; }
+.rowline .k-pill { height: 24px; padding: 0 var(--sp-8); }
+.k-rowcard__side { flex: none; display: flex; align-items: center; gap: var(--sp-8); color: var(--md3-outline); }
+.k-rowcard--sub { min-height: 56px; padding: var(--sp-12) var(--sp-16); }
+
+/* C-15 card · C-17 tiles · C-24 ring */
+.k-card { background: var(--md3-on-primary); border: 1px solid var(--md3-surface-variant); border-radius: 8px; }
+.k-card--pad { padding: var(--sp-16); }
+.hero { display: flex; align-items: center; gap: var(--sp-16); }
+.k-ring { position: relative; width: 72px; height: 72px; display: grid; place-items: center; flex: none; }
+.k-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.k-ring__track { stroke: var(--md3-surface-variant); }
+.k-ring__arc { stroke: var(--md3-primary); transition: stroke-dashoffset .4s; }
+.k-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-8); }
+.k-tile { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-12); border-radius: 8px; background: var(--md3-background); }
+.k-tile__n { font-variant-numeric: tabular-nums; color: var(--md3-on-surface-variant); }
+.k-num--bad { color: var(--md3-error); }
+
+/* C-28 segmented control */
+.k-seg { display: flex; gap: var(--sp-4); padding: var(--sp-4); border-radius: 8px; background: var(--md3-displaybg-primary); }
+.k-seg__b { flex: 1; height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); padding: 0 var(--sp-12); border: 0; border-radius: 6px; background: none; color: var(--md3-on-surface-variant); white-space: nowrap; cursor: pointer; }
+.k-seg__b.is-on { background: var(--md3-on-primary-container); color: var(--md3-on-primary); }
+.k-seg__b.is-on.is-bad { background: var(--md3-error); }
+
+/* C-49 form, step bar, fields, chip choice */
+.k-steps { display: flex; gap: var(--sp-4); margin: var(--sp-12) 0 0; padding: 0; list-style: none; }
+.k-steps__s { flex: 1; min-width: 0; height: 6px; border-radius: 999px; background: var(--md3-surface-variant); border: 0; padding: 0; cursor: pointer; position: relative; }
+.k-steps__s::after { content: ''; position: absolute; inset: -12px 0; }
+.k-steps__s.is-done { background: var(--md3-primary); }
+.k-steps__s.is-cur { background: var(--md3-on-surface); }
+.k-steps__s.is-bad { background: var(--md3-error); }
+.k-form__sec { display: flex; flex-direction: column; gap: var(--sp-24); padding: var(--sp-24) 0; }
+.k-field { display: flex; flex-direction: column; gap: var(--sp-8); }
+.k-field__l { display: flex; align-items: baseline; gap: var(--sp-8); color: var(--md3-on-surface-variant); }
+.k-field__l .req { color: var(--md3-error); }
+.k-field.is-missing .k-field__l { color: var(--md3-error); }
+.k-choice { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.k-chip { display: inline-flex; align-items: center; gap: var(--sp-8); min-height: var(--tap); padding: var(--sp-8) var(--sp-16); border: 1px solid var(--md3-outline-variant); border-radius: 8px;
+  background: var(--md3-on-primary); color: var(--md3-on-surface-variant); text-align: left; cursor: pointer; }
+.k-chip.is-on { background: var(--md3-surface); border-color: var(--md3-primary); color: var(--md3-on-surface); box-shadow: inset 0 0 0 1px var(--md3-primary); }
+.k-chip.is-on.is-bad { background: var(--md3-error-container); border-color: var(--md3-error); color: var(--md3-on-error-container); box-shadow: inset 0 0 0 1px var(--md3-error); }
+.k-chip .svg { width: 18px; height: 18px; }
+.yn { display: grid; grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: var(--sp-8); }
+.yn .k-chip { justify-content: center; min-height: 56px; text-align: center; }
+/* single choice = radio buttons; multi choice = buttons with a tick box */
+.radios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-8); }
+.radios--1 { grid-template-columns: minmax(0, 1fr); }
+.k-opt--sm { min-height: 52px; padding: var(--sp-8) var(--sp-12); gap: var(--sp-12); }
+.k-opt.is-on.is-bad { border-color: var(--md3-error); background: var(--md3-error-container); color: var(--md3-on-error-container); }
+.k-opt.is-on.is-bad .k-radio { border-color: var(--md3-error); }
+.k-chip .tick { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 4px; border: 2px solid var(--md3-outline); color: transparent; }
+.k-chip .tick .svg { width: 14px; height: 14px; stroke-width: 3; }
+.k-chip.is-on .tick { background: var(--md3-on-surface); border-color: var(--md3-on-surface); color: var(--md3-on-primary); }
+.k-chip.is-on.is-bad .tick { background: var(--md3-error); border-color: var(--md3-error); }
+.more-link { align-self: flex-start; padding-left: 0; color: var(--md3-on-surface); }
+/* voice: record a message or speak to type */
+.voice { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-8); }
+.voice .k-btn { height: auto; min-height: 56px; min-width: 0; padding: var(--sp-8); white-space: normal; text-align: center; line-height: 1.2; }
+.voice .k-btn:only-child { grid-column: 1 / -1; }
+.k-opt--sm .k-radio { width: 22px; height: 22px; }
+.k-opt--sm.is-on .k-radio { border-width: 7px; }
+.k-btn--rec { background: var(--md3-error); border-color: var(--md3-error); color: #fff; grid-column: 1 / -1; }
+.k-btn--live { background: var(--md3-on-primary-container); border-color: var(--md3-on-primary-container); color: var(--md3-on-primary); }
+.recdot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+.clips { display: flex; flex-direction: column; gap: var(--sp-8); }
+.clip { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-8) var(--sp-8) var(--sp-12); border: 1px solid var(--md3-surface-variant); border-radius: 8px; background: var(--md3-on-primary); }
+.clip audio { flex: 1; min-width: 0; height: 40px; }
+.clip .k-btn { width: 44px; padding: 0; flex: none; }
+.txtrow { display: flex; gap: var(--sp-8); align-items: flex-start; }
+.txtrow .k-inp { flex: 1; }
+.txtrow .k-btn { width: var(--tap); padding: 0; flex: none; }
+.k-inp.is-live { border-color: var(--md3-on-primary-container); box-shadow: inset 0 0 0 1px var(--md3-on-primary-container); }
+.sum-clips { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-8); }
+.sum-clips audio { width: 100%; height: 40px; }
+.k-inp { width: 100%; min-height: var(--tap); padding: var(--sp-12) var(--sp-16); border: 1px solid var(--md3-outline-variant); border-radius: 8px; background: var(--md3-on-primary); color: var(--md3-on-surface-variant); font: inherit; outline: none; }
+.k-inp:focus { border-color: var(--md3-primary); box-shadow: inset 0 0 0 1px var(--md3-primary); }
+textarea.k-inp { min-height: 96px; resize: vertical; }
+.k-sel { display: flex; align-items: center; gap: var(--sp-12); text-align: left; cursor: pointer; min-height: 56px; }
+.k-sel__v { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.k-sel.is-empty .k-sel__v { color: var(--md3-outline); }
+.timebox { display: flex; gap: var(--sp-8); }
+.timebox .k-sel { flex: 1; }
+.timebox__v { font-variant-numeric: tabular-nums; }
+.stepper { display: inline-flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4); border-radius: 8px; background: var(--md3-displaybg-primary); align-self: flex-start; }
+.stepper button { width: var(--tap); height: var(--tap); border: 0; border-radius: 6px; background: var(--md3-on-primary); color: var(--md3-on-surface); display: grid; place-items: center; cursor: pointer; }
+.stepper output { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; color: var(--md3-on-surface-variant); }
+
+/* C-48 option rows (tick/radio) */
+.k-opts { display: flex; flex-direction: column; gap: var(--sp-8); }
+.k-opt { display: flex; align-items: center; gap: var(--sp-12); width: 100%; min-height: 60px; padding: var(--sp-12) var(--sp-16); border: 1px solid var(--md3-surface-variant); border-radius: 8px;
+  background: var(--md3-on-primary); color: var(--md3-on-surface-variant); text-align: left; cursor: pointer; }
+.k-opt.is-on { border-color: var(--md3-primary); background: var(--md3-surface); }
+.k-opt__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.k-opt__side { flex: none; display: flex; align-items: center; gap: var(--sp-8); }
+.k-box { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 6px; border: 2px solid var(--md3-outline); background: var(--md3-on-primary); color: transparent; }
+.k-opt.is-on .k-box, .k-box.is-on { background: var(--md3-on-surface); border-color: var(--md3-on-surface); color: var(--md3-on-primary); }
+.k-box .svg { width: 18px; height: 18px; stroke-width: 3; }
+.k-radio { width: 24px; height: 24px; flex: none; border-radius: 50%; border: 2px solid var(--md3-outline); background: var(--md3-on-primary); }
+.k-opt.is-on .k-radio { border: 7px solid var(--md3-on-surface); }
+.k-opt--done .k-opt__main .t-minor-medium { text-decoration: line-through; text-decoration-color: var(--md3-outline); }
+
+/* checklist rows: label + OK / Concern */
+.audit { display: flex; flex-direction: column; border: 1px solid var(--md3-surface-variant); border-radius: 8px; background: var(--md3-on-primary); overflow: hidden; }
+.audit__row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) var(--sp-16); border-top: 1px solid var(--md3-surface-variant); flex-wrap: wrap; }
+.audit__row:first-child { border-top: 0; }
+.audit__row > span { flex: 1 1 200px; min-width: 0; }
+.audit__row .k-seg { flex: 0 0 auto; min-width: 220px; }
+.audit__row.is-bad { background: var(--md3-error-container); }
+.owe-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-8) var(--sp-12); padding: var(--sp-12) var(--sp-16); border-top: 1px solid var(--md3-surface-variant); }
+.owe-row:first-child { border-top: 0; }
+.owe-row .avatar { width: 32px; height: 32px; }
+.owe-row__who { flex: 1 1 140px; min-width: 0; }
+.bar-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); flex-wrap: wrap; }
+
+/* animal cards (roster) */
+.ani { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-16); border: 1px solid var(--md3-surface-variant); border-radius: 8px; background: var(--md3-on-primary); }
+.ani.is-bad { border-color: var(--md3-error); }
+.ani.is-ok { border-color: var(--md3-primary); }
+.ani__h { display: flex; align-items: center; gap: var(--sp-12); }
+.ani__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-8) var(--sp-12); }
+.ani__grid .k-seg__b { padding: 0 var(--sp-8); }
+.ani__cap { display: block; margin-bottom: var(--sp-4); }
+
+/* repeat groups */
+.grp { display: flex; flex-direction: column; gap: var(--sp-16); padding: var(--sp-16); border: 1px solid var(--md3-surface-variant); border-radius: 8px; background: var(--md3-on-primary); }
+.grp__h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+.grp .k-field__l { color: var(--md3-on-surface-variant); }
+
+/* C-59 summary list */
+.k-kv { display: grid; grid-template-columns: minmax(110px, 40%) minmax(0, 1fr); gap: var(--sp-12) var(--sp-16); margin: 0; }
+.k-kv dt, .k-kv dd { margin: 0; }
+.k-kv dd.is-bad { color: var(--md3-error); }
+.k-kv dd.is-miss { color: var(--md3-error); font-style: italic; }
+.sum-sec { display: flex; flex-direction: column; gap: var(--sp-12); }
+.sum-sec + .sum-sec { border-top: 1px solid var(--md3-surface-variant); padding-top: var(--sp-16); }
+.sum-item { padding: var(--sp-12); border-radius: 8px; background: var(--md3-background); }
+.flagbox { display: flex; gap: var(--sp-12); padding: var(--sp-16); border-radius: 8px; background: var(--md3-error-container); color: var(--md3-on-error-container); }
+.flagbox ul { margin: var(--sp-4) 0 0; padding-left: var(--sp-16); }
+.okbox { display: flex; gap: var(--sp-12); align-items: center; padding: var(--sp-16); border-radius: 8px; background: var(--md3-on-background); color: var(--md3-on-surface); }
+
+/* C-62 empty */
+.k-empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-12); padding: var(--sp-32) var(--sp-16); border: 1px dashed var(--md3-outline-variant); border-radius: 8px; background: var(--md3-on-primary); text-align: center; }
+.k-empty .svg { color: var(--md3-outline); width: 32px; height: 32px; }
+
+/* C-06 action bar, C-01 tab bar */
+.k-actionbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; }
+.k-actionbar__in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) var(--k-gutter) calc(var(--sp-12) + env(safe-area-inset-bottom));
+  background: var(--md3-on-primary); box-shadow: 0 -4px 10px var(--black-08); }
+.k-actionbar__in .k-btn { flex: 1; height: 52px; }
+.k-actionbar__in .k-btn--ghost, .k-actionbar__in .k-btn:not(.k-btn--primary):not(.k-btn--brand):not(.k-btn--alert) { flex: 0 0 auto; }
+.k-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--md3-on-primary); box-shadow: 0 -1px 0 var(--md3-surface-variant); padding-bottom: env(safe-area-inset-bottom); }
+.k-tabbar__in { max-width: 760px; margin: 0 auto; display: flex; padding: 0 var(--sp-8); }
+.k-tabbar__item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-4); height: 68px; border: 0; background: none;
+  color: var(--md3-on-surface-variant); border-top: 2px solid transparent; cursor: pointer; }
+.k-tabbar__item.is-on { color: var(--md3-on-surface); border-top-color: var(--md3-primary); }
+
+/* sheet + toast */
+.k-scrim { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; background: var(--md3-on-primary-container-a60); }
+.k-scrim[hidden] { display: none; }
+.k-sheet { width: 100%; max-width: 760px; max-height: 88vh; max-height: 88dvh; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px 12px 0 0; background: var(--md3-on-primary);
+  box-shadow: 0 4px 16px var(--md3-neutral-primary-a20); animation: up .18s ease-out; }
+@keyframes up { from { transform: translateY(32px); } }
+.k-sheet__grab { flex: none; width: 36px; height: 4px; margin: var(--sp-12) auto var(--sp-4); border-radius: 999px; background: var(--md3-outline-variant); }
+.k-sheet__h { flex: none; display: flex; align-items: flex-start; gap: var(--sp-12); padding: var(--sp-8) var(--sp-16) var(--sp-16); }
+.k-sheet__h > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.k-sheet__b { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-16); background: var(--md3-background); display: flex; flex-direction: column; gap: var(--sp-16); }
+.k-sheet__f { flex: none; display: flex; gap: var(--sp-12); padding: var(--sp-12) var(--sp-16) calc(var(--sp-12) + env(safe-area-inset-bottom)); background: var(--md3-on-primary); box-shadow: 0 -4px 10px var(--black-08); }
+.k-sheet__f .k-btn { flex: 1; height: 52px; }
+.grid-h { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-8); }
+.grid-h .k-chip { justify-content: center; padding: 0; font-variant-numeric: tabular-nums; }
+.grp-l { margin: var(--sp-8) 0 0; }
+.k-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 40; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; transition: .2s;
+  display: inline-flex; align-items: center; gap: var(--sp-8); padding: var(--sp-12) var(--sp-16); border-radius: 8px; background: var(--md3-on-secondary-container); color: var(--md3-on-primary); box-shadow: 0 4px 16px var(--md3-neutral-primary-a20); max-width: calc(100% - 32px); }
+.k-toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* onboarding */
+.role-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-12); }
+.role { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-12); padding: var(--sp-16); min-height: 120px; border: 1px solid var(--md3-surface-variant); border-radius: 8px; background: var(--md3-on-primary); text-align: left; cursor: pointer; }
+.role.is-on { border-color: var(--md3-primary); background: var(--md3-surface); box-shadow: inset 0 0 0 1px var(--md3-primary); }
+.role__ico { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; background: var(--md3-displaybg-primary); color: var(--md3-on-primary-container); }
+.brand { display: flex; align-items: center; gap: var(--sp-12); }
+.brand__mark { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--md3-primary); color: var(--md3-on-primary); }
+
+@media (max-width: 420px) {
+  .k-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ani__grid { grid-template-columns: 1fr; }
+  .audit__row .k-seg { min-width: 100%; }
+  .grid-h { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 360px) { .radios { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 640px) { .radios:not(.radios--1) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 640px) { :root { --k-gutter: var(--sp-24); } .role-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <main id="main"></main>
+</div>
+<div id="bar"></div>
+<div class="k-scrim" id="scrim" hidden><div class="k-sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="k-toast t-body-medium" id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   ANTS — the facility's master data. DRS never keeps its own animals, sites or staff;
+   in the real build the ANTS connector replaces this sample with the same shape.
+   ===================================================================== */
+const ANTS = {
+  sites: [
+    { code: "S1", name: "North Wildlife Park", zones: [
+      { code: "Z1", name: "Carnivores", encl: [
+        { code: "C-01", name: "Tiger enclosure", animals: [["T-101","Raja","Bengal tiger","M"],["T-102","Rani","Bengal tiger","F"]] },
+        { code: "C-02", name: "Leopard enclosure", animals: [["L-201","Chitra","Indian leopard","F"]] },
+        { code: "C-03", name: "Sloth bear enclosure", animals: [["B-301","Balu","Sloth bear","M"],["B-302","Meera","Sloth bear","F"]] } ] },
+      { code: "Z2", name: "Herbivores", encl: [
+        { code: "H-01", name: "Spotted deer paddock", animals: [["D-401","Herd A (12)","Spotted deer","—"],["D-402","Fawn group (3)","Spotted deer","—"]] },
+        { code: "H-02", name: "Sambar paddock", animals: [["D-411","Sambar herd (6)","Sambar deer","—"]] },
+        { code: "H-03", name: "Elephant yard", animals: [["E-501","Lakshmi","Asian elephant","F"]] } ] },
+      { code: "Z3", name: "Birds & reptiles", encl: [
+        { code: "A-01", name: "Walk-through aviary", animals: [["A-601","Peafowl group (8)","Indian peafowl","—"],["A-602","Parakeets (20)","Rose-ringed parakeet","—"]] },
+        { code: "R-01", name: "Crocodile pool", animals: [["R-701","Mugger pair","Mugger crocodile","—"]] },
+        { code: "R-02", name: "Python house", animals: [["R-711","Sheru","Indian rock python","M"]] } ] } ] },
+    { code: "S2", name: "South Rescue Centre", zones: [
+      { code: "Z4", name: "Rescue & rehab", encl: [
+        { code: "Q-01", name: "Quarantine block", animals: [["Q-801","Rescued leopard cub","Indian leopard","M"]] },
+        { code: "Q-02", name: "Monkey rehab", animals: [["Q-811","Macaque group (5)","Rhesus macaque","—"]] } ] },
+      { code: "Z5", name: "Hospital", encl: [
+        { code: "V-01", name: "Ward 1", animals: [["V-901","Injured owl","Barn owl","—"]] } ] } ] }
+  ],
+  staff: [
+    ["EP1001","Ravi Kumar","keeper","S1","Z1"],["EP1002","Sunita Devi","keeper","S1","Z2"],["EP1003","Imran Khan","keeper","S1","Z3"],
+    ["EP1004","Mohan Lal","keeper","S1","Z1"],["EP1005","Kavita Rao","keeper","S2","Z4"],["EP1006","Arjun Singh","keeper","S2","Z5"],
+    ["EP2001","Deepa Nair","sup","S1","Z1"],["EP2002","Vikram Joshi","sup","S2","Z4"],
+    ["EP3001","Dr. Anita Shah","vet","S1","Z1"],["EP3002","Dr. Rahul Mehta","vet","S2","Z5"],
+    ["EP4001","Priya Iyer","bio","S1","Z2"],["EP4002","Sameer Patil","bio","S2","Z4"],
+    ["EP5001","Dr. Neha Kapoor","cur","S1","Z1"]
+  ].map(([uid, name, role, site, zone]) => ({ uid, name, role, site, zone }))
+};
+
+/* ---------- icons (24px stroke) ---------- */
+const IC = {
+  back: '<path d="M15 18l-6-6 6-6"/>', chev: '<path d="M9 18l6-6-6-6"/>', down: '<path d="M6 9l6 6 6-6"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alert: '<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  paw: '<circle cx="5.5" cy="10" r="2"/><circle cx="9.5" cy="5.5" r="2"/><circle cx="14.5" cy="5.5" r="2"/><circle cx="18.5" cy="10" r="2"/><path d="M12 11c-3 0-6 4-6 7 0 2 2 3 3.5 2.5S11 20 12 20s1.5.5 2.5.5S18 20 18 18c0-3-3-7-6-7z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>', eye: '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14c2.5.6 4 2.8 4 6"/>',
+  heart: '<path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/><path d="M7 12h3l1.5-3 2 6 1.5-3h2"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', truck: '<path d="M1 4h13v12H1zM14 8h4l4 4v4h-8"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>',
+  book: '<path d="M4 4h6a3 3 0 013 3v13a2 2 0 00-2-2H4zM20 4h-6a3 3 0 00-3 3v13a2 2 0 012-2h7z"/>', clip: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10l2 2 4-4M9 16h6"/>',
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>', hist: '<path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.4"/><path d="M3 4v4h4M12 7v5l3 2"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>', share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/>', trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', send: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>', leaf: '<path d="M11 20A7 7 0 014 13c0-6 5-10 16-10 0 11-4 17-9 17z"/><path d="M4 21c4-6 8-9 12-11"/>',
+  note: '<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4M8 22h8"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  speak: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/>', kbd: '<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 15h10"/>'
+};
+const ico = (n, cls) => `<svg class="svg${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${IC[n] || ""}</svg>`;
+
+/* ---------- option lists (from the DRS spec) ---------- */
+const YN = ["Yes", "No"];
+const REPORT_TO = ["Head Animal Keeper", "Site Supervisor", "Paravet", "Vet", "Curator", "Security", "AFM"];
+const OBS_TAGS = ["Not eating", "Not drinking", "Lethargic / dull", "Limping", "Wound / injury", "Swelling", "Eye / nose discharge", "Diarrhoea", "Vomiting", "Breathing difficulty", "Coughing / sneezing", "Hair or feather loss", "Repetitive pacing", "Aggression"];
+const CHECKS = {
+  "Enclosure": ["Mesh, walls & fences intact", "No sharp edges, rust or loose welds", "Locks & gates working", "Floor / substrate clean & dry", "Drainage working", "Shade & shelter available", "Hiding / retreat space available", "No debris, tools or hazards"],
+  "Habitat": ["Temperature right for the species", "Humidity right", "Lighting / UVB working", "Noise & disturbance low", "Plants & browse safe, non-toxic", "Pool / water body clean", "Mud, dust bath or misting where needed"],
+  "Enrichment": ["Items safe & non-toxic", "Items approved & safety-tested", "Rotation schedule followed", "Animal using the items", "Broken or dirty items removed"],
+  "Social group": ["No fighting or fresh wounds", "Every animal reaches food & water", "Bonded animals kept together", "No animal isolated or chased", "Introductions going to plan"],
+  "Feeding & diet": ["Diet matches the chart", "Fed at the species time slot", "Bowls clean", "Leftovers recorded", "Food refusal reported"],
+  "Behaviour & welfare": ["No repetitive behaviour seen", "Normal activity & alertness", "Animal has choice (in/out, shade/sun)", "Body condition looks normal", "No signs of pain or illness"]
+};
+const DAY_TASKS = [
+  ["Arrival", [["a1","7:00","Read the handover notes",0],["a2","7:10","Collect keys & radio, test the radio",1],["a3","7:15","Morning headcount",1],["a4","7:30","Check perimeter fences & barriers",1]]],
+  ["Morning", [["m1","8:00","Observe each animal before cleaning",0],["m2","8:20","Shift animals out, double-check locks",1],["m3","8:30","Clean enclosure & night quarters",0],["m4","9:30","Final sweep, remove all tools",1],["m5","10:00","Prepare diets in the kitchen",0],["m6","11:00","Set out enrichment",0]]],
+  ["Afternoon", [["p1","13:00","Training session",0],["p2","14:00","Keeper talk / feeding demo",0],["p3","15:00","Midday welfare check",0],["p4","15:30","Tidy work area & stores",0]]],
+  ["Closing", [["c1","16:00","Shift animals into night quarters",0],["c2","16:45","Final headcount & lock check",1],["c4","17:20","Return keys & radio",1]]]
+];
+const ATT = ["Present", "Absent", "Leave", "Weekly off", "Late"];
+
+/* =====================================================================
+   FORMS — tap first, type only where words are the data. Types:
+   seg (one choice: big buttons for 2–3 short options, radio buttons otherwise; "Other" opens a describe box) · yn · multi (tick buttons)
+   time · num (− / +) · pick (radio / tick list of my zone, sheet for the rest of the site) · check
+   tasks (tick list) · audit (OK / Concern rows) · roster (every animal in the zone) · attend (staff)
+   note (quick phrases + voice message + speak-to-type + typing) · text (real typed text, with speak-to-type)
+   group (repeatable card). bad = values that raise a flag. req = must be answered before sending.
+   ===================================================================== */
+const FORMS = {
+  kday: { title: "Day keeper report", icon: "sun", roles: ["keeper"], per: "day", sections: [
+    { k: "s", l: "Start of shift", fields: [
+      { k: "arr", t: "time", l: "Arrived at", now: 1, req: 1 },
+      { k: "ho", t: "yn", l: "Handover notes read", bad: ["No"], req: 1 },
+      { k: "radio", t: "yn", l: "Radio working", bad: ["No"], req: 1 },
+      { k: "count", t: "yn", l: "All animals seen in the morning headcount", bad: ["No"], req: 1 },
+      { k: "missing", t: "pick", src: "animal", multi: 1, l: "Which animals were not seen?", show: v => v.count === "No", req: 1 },
+      { k: "fence", t: "seg", l: "Fences & barriers", o: ["Good", "Damage found"], bad: ["Damage found"], req: 1 } ] },
+    { k: "t", l: "Daily checklist", hint: "Tap each task as you finish it. Safety tasks are marked.", fields: [ { k: "done", t: "tasks" } ] },
+    { k: "a", l: "Animals today", hint: "One tap per answer. Use ‘All normal’ if nothing is wrong.", fields: [ { k: "roster", t: "roster", req: 1 } ] },
+    { k: "c", l: "Close & handover", fields: [
+      { k: "count", t: "yn", l: "Final headcount correct", bad: ["No"], req: 1 },
+      { k: "locks", t: "yn", l: "Every lock tested", bad: ["No"], req: 1 },
+      { k: "enrich", t: "seg", l: "Enrichment given today", o: ["Yes", "No", "Not planned"] },
+      { k: "keys", t: "check", l: "Keys & radio returned", req: 1 },
+      { k: "to", t: "pick", src: "staff", l: "Handed over to" },
+      { k: "note", t: "note", l: "Notes for the next keeper", o: ["Quiet day, nothing to report", "Watch feeding tomorrow", "Repair still pending", "Vet visit due", "Diet changed today"] } ] }
+  ] },
+  night: { title: "Night keeper log", icon: "moon", roles: ["keeper"], per: "day", sections: [
+    { k: "d", l: "Duty details", fields: [
+      { k: "start", t: "time", l: "Duty started", now: 1, req: 1 },
+      { k: "from", t: "pick", src: "staff", l: "Took handover from" } ] },
+    { k: "r", l: "Night rounds", hint: "Add a round each time you walk the section.", fields: [
+      { k: "rounds", t: "group", min: 1, item: "Round", add: "Add a round", fields: [
+        { k: "start", t: "time", l: "Round started", now: 1, req: 1 },
+        { k: "seen", t: "yn", l: "All animals seen", bad: ["No"], req: 1 },
+        { k: "locks", t: "yn", l: "All locks checked", bad: ["No"], req: 1 },
+        { k: "end", t: "time", l: "Round finished" },
+        { k: "note", t: "note", l: "Notes" } ] } ] },
+    { k: "f", l: "Findings", hint: "Birth, death, fight, injury, power cut and more.", fields: [
+      { k: "none", t: "check", l: "Nothing unusual tonight" },
+      { k: "finds", t: "group", item: "Finding", add: "Add a finding", show: v => !v.none, fields: [
+        { k: "type", t: "seg", l: "What happened", req: 1, o: ["Birth", "Mortality", "Fight", "Injury", "Dull / lethargic", "Not eating", "Distress calling", "Escape / near-miss", "Lock or gate problem", "Power cut", "Water leak", "Storm, heat or cold", "Intruder", "Fire or smoke", "Other"], bad: ["Mortality", "Fight", "Injury", "Escape / near-miss", "Fire or smoke", "Intruder"] },
+        { k: "animal", t: "pick", src: "animal", l: "Animal" },
+        { k: "time", t: "time", l: "Time", now: 1 },
+        { k: "emer", t: "yn", l: "Emergency?", bad: ["Yes"], req: 1 },
+        { k: "to", t: "multi", l: "Reported to", o: REPORT_TO },
+        { k: "note", t: "note", l: "What you saw and did", req: 1 } ] } ] },
+    { k: "h", l: "Morning handover", fields: [
+      { k: "end", t: "time", l: "Duty ended", now: 1 },
+      { k: "to", t: "pick", src: "staff", l: "Handed over to" },
+      { k: "done", t: "check", l: "Handover given", req: 1 },
+      { k: "note", t: "note", l: "Other observations", o: ["Heavy rain", "Loud noise nearby", "Power cut", "Visitors / vehicles at night", "Equipment fault"] } ] }
+  ] },
+  special: { title: "Special duty log", icon: "eye", roles: ["keeper"], per: "event", sections: [
+    { k: "d", l: "Duty", fields: [
+      { k: "duty", t: "seg", l: "Special duty", req: 1, o: ["New arrival watch", "New pair / introduction", "Birth watch", "Mother & newborn", "After surgery / treatment", "Sick animal watch", "Quarantine watch", "Hand-rearing", "After shifting", "Other"] },
+      { k: "animal", t: "pick", src: "animal", multi: 1, l: "Animal(s)", req: 1 },
+      { k: "start", t: "time", l: "Started", now: 1, req: 1 },
+      { k: "instr", t: "note", l: "Instructions from Vet / Curator" } ] },
+    { k: "w", l: "Checks", hint: "Add a check each time you look at the animal.", fields: [
+      { k: "obs", t: "group", min: 1, item: "Check", add: "Add a check", fields: [
+        { k: "time", t: "time", l: "Time", now: 1, req: 1 },
+        { k: "tags", t: "multi", l: "What you saw", req: 1, o: ["Normal", "Eating", "Drinking", "Resting", "Active", "Nursing", "Getting along", "Aggression", "Restless / distressed", "Calling", "Not eating", "Heavy breathing", "Bleeding / wound"], bad: ["Aggression", "Restless / distressed", "Not eating", "Heavy breathing", "Bleeding / wound"] },
+        { k: "note", t: "note", l: "Notes" } ] } ] },
+    { k: "h", l: "Finish", fields: [
+      { k: "to", t: "multi", l: "Concerns reported to", o: REPORT_TO },
+      { k: "end", t: "time", l: "Finished", now: 1 },
+      { k: "done", t: "check", l: "Handover given", req: 1 } ] }
+  ] },
+  sup: { title: "Supervisor round", icon: "shield", roles: ["sup"], per: "day", sections: [
+    { k: "s", l: "Shift", fields: [
+      { k: "shift", t: "seg", l: "Shift", o: ["Morning", "Evening", "Night"], req: 1 },
+      { k: "ho", t: "yn", l: "Handover received", bad: ["No"], req: 1 },
+      { k: "count", t: "seg", l: "Site headcount", o: ["All counted", "Count mismatch"], bad: ["Count mismatch"], req: 1 } ] },
+    { k: "e", l: "Animal events", fields: [
+      { k: "none", t: "check", l: "No events today" },
+      { k: "ev", t: "group", item: "Event", add: "Add an event", show: v => !v.none, fields: [
+        { k: "type", t: "seg", l: "Event", req: 1, o: ["Birth", "Mortality", "Sick / injured", "Under treatment", "New arrival", "Transfer out", "Behaviour concern", "Staff injury / bite", "Escape / near-miss", "Good news"], bad: ["Mortality", "Sick / injured", "Staff injury / bite", "Escape / near-miss"] },
+        { k: "animal", t: "pick", src: "animal", l: "Animal" },
+        { k: "n", t: "num", l: "How many", min: 1, def: 1 },
+        { k: "vet", t: "yn", l: "Vet informed" },
+        { k: "note", t: "note", l: "Details" } ] } ] },
+    { k: "f", l: "Diet & kitchen", fields: [
+      { k: "time", t: "yn", l: "Diets delivered on time", bad: ["No"], req: 1 },
+      { k: "qual", t: "seg", l: "Diet quality", o: ["Good", "Needs attention"], bad: ["Needs attention"], req: 1 } ] },
+    { k: "x", l: "Safety round", fields: [
+      { k: "safe", t: "audit", items: ["Locks & gates", "Fences & barriers", "Radios", "Fire extinguishers", "First-aid kit", "Drinking water points", "Keeper PPE"], req: 1 } ] },
+    { k: "c", l: "Close", fields: [
+      { k: "in", t: "yn", l: "All animals secured for the night", bad: ["No"], req: 1 },
+      { k: "note", t: "note", l: "Remarks", o: ["Smooth day", "Staff short today", "Repair raised with AFM", "VIP visit", "Heat stress precautions taken"] } ] }
+  ] },
+  att: { title: "Staff attendance", icon: "users", roles: ["sup"], per: "day", sections: [
+    { k: "a", l: "Attendance", hint: "Tap a status for each person, or mark everyone present first.", fields: [ { k: "list", t: "attend", req: 1 } ] }
+  ] },
+  bio: { title: "Enclosure check", icon: "clip", roles: ["bio", "sup"], per: "event", sections: [
+    { k: "w", l: "What you checked", fields: [
+      { k: "encl", t: "pick", src: "encl", l: "Enclosure", req: 1 },
+      { k: "type", t: "seg", l: "Check", o: Object.keys(CHECKS), req: 1 } ] },
+    { k: "c", l: "Checklist", fields: [ { k: "items", t: "audit", from: "w/type", req: 1 } ] },
+    { k: "a", l: "Action", fields: [
+      { k: "act", t: "multi", l: "Action needed", o: ["None", "Keeper to fix today", "Repair: send to AFM", "Vet to see", "Curator to decide"], bad: ["Repair: send to AFM", "Vet to see"] },
+      { k: "note", t: "note", l: "Notes", o: ["Recheck tomorrow", "Shared with keeper", "Photo taken"] } ] }
+  ] },
+  shift: { title: "Animal shifting", icon: "truck", roles: ["bio", "cur"], per: "event", sections: [
+    { k: "a", l: "Animal & move", fields: [
+      { k: "animal", t: "pick", src: "animal", l: "Animal", req: 1 },
+      { k: "kind", t: "seg", l: "Type of move", req: 1, o: ["Within enclosure / night house", "Another enclosure, same site", "Another site", "To hospital / quarantine", "Incoming from outside"] },
+      { k: "to", t: "pick", src: "encl", l: "Moving to" },
+      { k: "how", t: "seg", l: "Method", o: ["Walk-through / gate", "Crate", "Crate + vehicle", "Under sedation"] },
+      { k: "status", t: "seg", l: "Status", o: ["Planned", "Approved", "In progress", "Completed", "Cancelled"], req: 1 },
+      { k: "why", t: "note", l: "Reason for the move" } ] },
+    { k: "p", l: "Before the move", fields: [
+      { k: "chk", t: "multi", l: "Checks done", req: 1, o: ["Vet health check", "Curator approval", "Crate inspected", "Receiving enclosure ready", "Route cleared", "Team briefed", "Weather suitable", "Vet on standby", "Permits ready"] } ] },
+    { k: "s", l: "After the move", fields: [
+      { k: "done", t: "time", l: "Move completed at" },
+      { k: "settle", t: "multi", l: "Settling", o: ["Calm", "Exploring", "Eating", "Drinking", "Stressed / pacing", "Hiding", "Not eating", "Injury seen"], bad: ["Stressed / pacing", "Not eating", "Injury seen"] },
+      { k: "note", t: "note", l: "Notes for the next 3 days" } ] }
+  ] },
+  vet: { title: "Vet health report", icon: "heart", roles: ["vet"], per: "day", sections: [
+    { k: "h", l: "Health round", fields: [
+      { k: "list", t: "group", min: 1, item: "Animal", add: "Add an animal", fields: [
+        { k: "animal", t: "pick", src: "animal", l: "Animal", req: 1 },
+        { k: "res", t: "seg", l: "Finding", o: ["Normal", "Concern", "Under treatment"], bad: ["Concern"], req: 1 },
+        { k: "tags", t: "multi", l: "Signs", o: OBS_TAGS, show: v => v.res && v.res !== "Normal" },
+        { k: "note", t: "note", l: "Notes", show: v => v.res && v.res !== "Normal" } ] } ] },
+    { k: "t", l: "Treatments", fields: [
+      { k: "list", t: "group", item: "Treatment", add: "Add a treatment", fields: [
+        { k: "animal", t: "pick", src: "animal", l: "Animal", req: 1 },
+        { k: "kind", t: "seg", l: "Given", o: ["Antibiotic", "Pain relief", "Dewormer", "Vaccine", "Vitamins", "Wound dressing", "Fluids", "Other"], req: 1 },
+        { k: "med", t: "text", l: "Medicine & dose", ph: "e.g. Meloxicam 0.1 mg/kg", req: 1 },
+        { k: "route", t: "seg", l: "Route", o: ["Oral", "Injection", "Topical", "Eye / ear drops", "In food"] },
+        { k: "next", t: "seg", l: "Review", o: ["Tomorrow", "In 3 days", "In a week", "No follow-up"] } ] } ] },
+    { k: "b", l: "Births & deaths", fields: [
+      { k: "births", t: "group", item: "Birth", add: "Add a birth", fields: [
+        { k: "mother", t: "pick", src: "animal", l: "Mother", req: 1 },
+        { k: "n", t: "num", l: "Number born", min: 1, def: 1 },
+        { k: "cond", t: "seg", l: "Condition", o: ["Healthy", "Weak", "Hand-rearing"], bad: ["Weak"] } ] },
+      { k: "morts", t: "group", item: "Mortality", add: "Add a mortality", fields: [
+        { k: "animal", t: "pick", src: "animal", l: "Animal", req: 1 },
+        { k: "time", t: "time", l: "Found at" },
+        { k: "cause", t: "text", l: "Suspected cause" },
+        { k: "pm", t: "seg", l: "Post-mortem", o: ["Done", "Planned", "Not needed"] },
+        { k: "lab", t: "check", l: "Samples sent to lab" } ] } ] },
+    { k: "k", l: "Kitchen & summary", fields: [
+      { k: "hyg", t: "seg", l: "Kitchen hygiene", o: ["Good", "Needs attention"], bad: ["Needs attention"], req: 1 },
+      { k: "diet", t: "seg", l: "Diet quality", o: ["Good", "Needs attention"], bad: ["Needs attention"], req: 1 },
+      { k: "sum", t: "seg", l: "Overall site health today", o: ["All healthy", "Minor concerns", "Serious concerns"], bad: ["Serious concerns"], req: 1 },
+      { k: "note", t: "note", l: "Hospital, quarantine & other notes" } ] }
+  ] },
+  cur: { title: "Curator review", icon: "book", roles: ["cur"], per: "day", sections: [
+    { k: "r", l: "Reports reviewed", fields: [
+      { k: "read", t: "multi", l: "Reviewed today", req: 1, o: ["Day keeper", "Night keeper", "Special duty", "Supervisor", "Enclosure checks", "Animal shifting", "Vet", "Incidents"] } ] },
+    { k: "d", l: "Decisions", fields: [
+      { k: "list", t: "group", item: "Decision", add: "Add a decision", fields: [
+        { k: "about", t: "seg", l: "About", o: ["Diet change", "Shifting", "Enrichment", "Breeding", "Treatment plan", "Repair work", "Other"], req: 1 },
+        { k: "what", t: "pick", src: "animal", l: "Animal / enclosure concerned" },
+        { k: "dec", t: "seg", l: "Decision", o: ["Approved", "Not approved", "On hold"], bad: ["Not approved"], req: 1 },
+        { k: "note", t: "note", l: "Note" } ] } ] },
+    { k: "w", l: "Welfare", fields: [
+      { k: "welf", t: "seg", l: "Welfare overall", o: ["Good", "Some concerns", "Serious concerns"], bad: ["Serious concerns"], req: 1 },
+      { k: "note", t: "note", l: "Instructions to the team", o: ["Keep up the good work", "Increase enrichment", "Watch heat stress", "Follow vet advice strictly"] } ] }
+  ] },
+  inc: { title: "Incident report", icon: "alert", roles: ["keeper", "sup", "bio", "vet", "cur"], per: "event", urgent: 1, sections: [
+    { k: "w", l: "What happened", fields: [
+      { k: "type", t: "seg", l: "Type of incident", req: 1, o: ["Animal escape", "Animal down / collapsed", "Injury to animal", "Fight between animals", "Staff injury / bite", "Near-miss", "Enclosure damage", "Visitor incident", "Fire / smoke", "Theft / intrusion", "Other"], bad: ["Animal escape", "Animal down / collapsed", "Staff injury / bite", "Fire / smoke"] },
+      { k: "time", t: "time", l: "Time noticed", now: 1, req: 1 },
+      { k: "sev", t: "seg", l: "Severity", o: ["Low", "Medium", "High", "Critical"], bad: ["High", "Critical"], req: 1 },
+      { k: "animal", t: "pick", src: "animal", multi: 1, l: "Animal(s) involved" },
+      { k: "encl", t: "pick", src: "encl", l: "Where" } ] },
+    { k: "o", l: "Outcome", fields: [
+      { k: "out", t: "seg", l: "Result", req: 1, o: ["Back in enclosure", "Returned on its own", "Still missing", "Contained", "Treated by vet", "Died", "Other"], bad: ["Still missing", "Died"] },
+      { k: "inj", t: "seg", l: "Injuries", o: ["None", "Animal injured", "Staff injured", "Animal and staff"], bad: ["Animal injured", "Staff injured", "Animal and staff"], req: 1 },
+      { k: "rtime", t: "time", l: "Time resolved" } ] },
+    { k: "p", l: "People informed", fields: [
+      { k: "to", t: "multi", l: "Informed", req: 1, o: ["Head Animal Keeper", "Site Supervisor", "Curator", "Vet", "Manager", "Security", "AFM"] },
+      { k: "vet", t: "yn", l: "Vet attended" },
+      { k: "status", t: "seg", l: "Incident status", o: ["Open", "Closed"], req: 1 },
+      { k: "note", t: "note", l: "What happened, step by step", req: 1, o: ["Gate left unlocked", "Mesh broken", "Animal fight", "Visitor ignored barrier", "Slippery floor"] } ] }
+  ] }
+};
+const ROLES = {
+  keeper: { l: "Keeper", d: "Day & night duty, special watch", icon: "paw", forms: ["kday", "night", "special", "inc"] },
+  sup: { l: "Site Supervisor", d: "Site round, attendance, checks", icon: "shield", forms: ["sup", "att", "bio", "inc"] },
+  bio: { l: "Biologist", d: "Enclosure checks & shifting", icon: "leaf", forms: ["bio", "shift", "inc"] },
+  vet: { l: "Vet", d: "Health round & treatments", icon: "heart", forms: ["vet", "inc"] },
+  cur: { l: "Curator", d: "Review & decisions", icon: "book", forms: ["cur", "shift", "inc"] }
+};
+
+/* =====================================================================
+   STORE — this device only. Every read/write is guarded so a blocked storage never breaks the page.
+   ===================================================================== */
+const KEY = "drs-lite-v1";
+let DB = { me: null, reports: [], outbox: [], team: [], teamAt: 0, code: "" };
+try { const raw = localStorage.getItem(KEY); if (raw) DB = Object.assign(DB, JSON.parse(raw)); } catch (e) {}
+DB.outbox = DB.outbox || []; DB.team = DB.team || [];
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) {} };
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const dayKey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const TODAY = () => dayKey(new Date());
+const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const fmtDay = k => { const d = new Date(k + "T12:00:00"); const t = TODAY(); const y = dayKey(new Date(Date.now() - 864e5));
+  return k === t ? "Today" : k === y ? "Yesterday" : d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); };
+const longDay = () => new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const initials = n => n.replace(/^Dr\.\s*/, "").split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+
+const me = () => DB.me;
+const meStaff = () => ANTS.staff.find(s => s.uid === (me() || {}).uid);
+const site = code => ANTS.sites.find(s => s.code === code);
+const zoneOf = (s, z) => (site(s) || { zones: [] }).zones.find(x => x.code === z);
+let CTX = null;
+const ctx = () => CTX || { site: me().site, zone: me().zone, by: me().uid };
+const withR = (r, fn) => { const keep = CTX; CTX = r ? { site: r.site, zone: r.zone, by: r.by } : null; try { return fn(); } finally { CTX = keep; } };
+const siteEncl = () => { const s = site(ctx().site); return s ? s.zones.flatMap(z => z.encl.map(e => Object.assign({ zone: z }, e))) : []; };
+const siteAnimals = () => siteEncl().flatMap(e => e.animals.map(([id, name, species, sex]) => ({ id, name, species, sex, encl: e })));
+const zoneAnimals = () => siteAnimals().filter(a => a.encl.zone.code === ctx().zone);
+const allAnimals = () => ANTS.sites.flatMap(s => s.zones.flatMap(z => z.encl.flatMap(e => e.animals.map(([id, name, species]) => ({ id, name, species, encl: e })))));
+const allEncl = () => ANTS.sites.flatMap(s => s.zones.flatMap(z => z.encl));
+const labelOf = (src, id) => {
+  if (src === "animal") { const a = allAnimals().find(x => x.id === id); return a ? `${a.name} · ${a.species}` : id; }
+  if (src === "encl") { const e = allEncl().find(x => x.code === id); return e ? `${e.code} ${e.name}` : id; }
+  if (src === "staff") { const s = ANTS.staff.find(x => x.uid === id); return s ? s.name : id; }
+  return id;
+};
+
+/* pick lists: near = my zone (shown inline as radio / tick rows), else the whole site (sheet) */
+function pickOpts(src, near) {
+  if (src === "animal") return (near ? zoneAnimals() : siteAnimals()).map(a => [a.id, a.name, `${a.species} · ${a.encl.code} ${a.encl.name}`]);
+  if (src === "encl") return siteEncl().filter(e => !near || e.zone.code === ctx().zone).map(e => [e.code, `${e.code} · ${e.name}`, e.animals.map(a => a[1]).join(", ")]);
+  if (src === "staff") return staffHere().filter(s => !near || s.zone === me().zone || s.role === me().role).map(s => [s.uid, s.name, `${ROLES[s.role].l} · ${zoneOf(s.site, s.zone).name}`]);
+  return [];
+}
+/* paths: "sec/field" or "sec/group/2/field" */
+const getP = (o, p) => p.split("/").reduce((a, k) => a == null ? undefined : a[k], o);
+function setP(o, p, v) { const ks = p.split("/"); let a = o; ks.slice(0, -1).forEach((k, i) => { if (a[k] == null || typeof a[k] !== "object") a[k] = /^\d+$/.test(ks[i + 1]) ? [] : {}; a = a[k]; }); a[ks[ks.length - 1]] = v; }
+
+/* ---------- report records ---------- */
+const report = id => DB.reports.find(r => r.id === id) || DB.team.find(r => r.id === id);
+const isMine = r => r && r.by === me().uid;
+const mine = () => DB.reports.filter(r => r.by === me().uid);
+const todays = f => mine().filter(r => r.form === f && r.date === TODAY());
+function newReport(f) {
+  const r = { id: uid(), form: f, by: me().uid, site: me().site, zone: me().zone, date: TODAY(), status: "draft", created: Date.now(), data: {} };
+  FORMS[f].sections.forEach(s => s.fields.forEach(fd => {
+    const p = s.k + "/" + fd.k;
+    if (fd.t === "time" && fd.now) setP(r.data, p, nowHM());
+    if (fd.t === "num") setP(r.data, p, fd.def || 0);
+    if (fd.t === "group" && fd.min) setP(r.data, p, [seedItem(fd)]);
+  }));
+  DB.reports.unshift(r); persist(); return r;
+}
+function seedItem(g) { const it = {}; g.fields.forEach(f => { if (f.t === "time" && f.now) it[f.k] = nowHM(); if (f.t === "num") it[f.k] = f.def || 0; }); return it; }
+
+/* ---------- answers: empty / flagged / complete ---------- */
+const auditItems = (f, data) => f.items || CHECKS[getP(data, f.from)] || [];
+function isEmpty(f, v, data) {
+  if (f.t === "multi" || (f.t === "pick" && f.multi)) return !v || !v.length;
+  if (f.t === "check") return !v;
+  if (f.t === "audit") { const it = auditItems(f, data); return !it.length || it.some((_, i) => !(v || {})[i]); }
+  if (f.t === "roster") return zoneAnimals().some(a => { const x = (v || {})[a.id] || {}; return !x.ate || !x.h; });
+  if (f.t === "attend") return staffHere().some(s => !(v || {})[s.uid]);
+  if (f.t === "group") return !(v || []).length;
+  if (f.t === "note") return !v || (!(v.p || []).length && !(v.txt || "").trim() && !(v.clips || []).length);
+  return v == null || v === "";
+}
+function badOf(f, v, data) {
+  if (v == null) return [];
+  if ((f.t === "seg" || f.t === "yn") && f.bad && f.bad.includes(v)) return [`${f.l}: ${v}`];
+  if (f.t === "multi" && f.bad) return v.filter(x => f.bad.includes(x)).map(x => `${f.l}: ${x}`);
+  if (f.t === "audit") return auditItems(f, data).filter((_, i) => v[i] === "Concern").map(x => `Concern: ${x}`);
+  if (f.t === "roster") return zoneAnimals().flatMap(a => { const x = v[a.id] || {}; const o = [];
+    if (x.ate === "None") o.push(`${a.name}: not eating`); if (x.h === "Concern") o.push(`${a.name}: ${(x.tags || []).join(", ") || "health concern"}`); return o; });
+  if (f.t === "pick" && f.k === "missing" && v.length) return [`Not seen: ${v.map(id => labelOf("animal", id)).join(", ")}`];
+  if (f.t === "group") return v.flatMap((it, i) => f.fields.filter(sf => visible(sf, it)).flatMap(sf => badOf(sf, it[sf.k], data).map(b => `${f.item} ${i + 1} · ${b}`)));
+  if (f.t === "attend") { const c = staffHere().filter(s => v[s.uid] === "Absent").length; return c ? [`${c} absent without leave`] : []; }
+  return [];
+}
+const visible = (f, scope) => !f.show || f.show(scope || {});
+function missingIn(form, data) {
+  const out = [];
+  form.sections.forEach((s, si) => s.fields.forEach(f => {
+    const scope = data[s.k] || {};
+    if (!visible(f, scope)) return;
+    const v = scope[f.k];
+    if (f.req && isEmpty(f, v, data)) out.push({ si, l: f.l || s.l });
+    if (f.t === "seg" && v === "Other" && !(scope[f.k + "_o"] || "").trim()) out.push({ si, l: `${f.l}: describe ‘Other’` });
+    if (f.t === "group") {
+      if (f.min && (v || []).length < f.min) out.push({ si, l: `${f.item}: add at least ${f.min}` });
+      (v || []).forEach((it, i) => f.fields.forEach(sf => { if (!visible(sf, it)) return; if (sf.req && isEmpty(sf, it[sf.k], data)) out.push({ si, l: `${f.item} ${i + 1}: ${sf.l}` });
+        if (sf.t === "seg" && it[sf.k] === "Other" && !(it[sf.k + "_o"] || "").trim()) out.push({ si, l: `${f.item} ${i + 1}: describe ‘Other’` }); }));
+    }
+  }));
+  return out;
+}
+const flagsOf = r => withR(r, () => flagsIn(FORMS[r.form], r.data));
+const flagsIn = (form, data) => form.sections.flatMap(s => s.fields.filter(f => visible(f, data[s.k])).flatMap(f => badOf(f, (data[s.k] || {})[f.k], data)));
+const staffHere = () => ANTS.staff.filter(s => s.site === ctx().site && s.uid !== ctx().by);
+
+/* =====================================================================
+   VIEWS
+   ===================================================================== */
+let VIEW = { name: "home" };
+function go(v) { stopVoice(); VIEW = v; render(); window.scrollTo(0, 0); }
+function render() {
+  if (!me()) return renderOnboard();
+  const rr = VIEW.id && report(VIEW.id); CTX = rr ? { site: rr.site, zone: rr.zone, by: rr.by } : null;
+  ({ team: renderTeam, home: renderHome, form: renderForm, review: renderReview, history: renderHistory, profile: renderProfile, start: renderStart }[VIEW.name] || renderHome)();
+}
+const tabbar = on => `<nav class="k-tabbar" aria-label="Main"><div class="k-tabbar__in">${[["home", "home", "Today"], ["team", "users", "Team"], ["history", "hist", "History"], ["profile", "user", "Me"]]
+  .map(([v, i, l]) => `<button class="k-tabbar__item ${on === v ? "is-on" : ""}" data-a="go" data-v="${v}" ${on === v ? 'aria-current="page"' : ""}>${ico(i)}<span class="t-subtext-title">${l}</span></button>`).join("")}</div></nav>`;
+const statusPill = r => !r ? `<span class="k-pill t-body-medium">Not started</span>`
+  : r.status === "sent" && DB.outbox.includes(r.id) && API ? `<span class="k-pill k-pill--info t-body-medium">${ico("clock", "svg--sm")}Waiting for signal</span>`
+  : r.status === "sent" ? `<span class="k-pill k-pill--ok t-body-medium">${ico("check", "svg--sm")}Sent</span>` : `<span class="k-pill k-pill--warn t-body-medium">Draft</span>`;
+
+/* ---------- onboarding: who is reporting (tap role → name → zone) ---------- */
+let OB = { role: null, uid: null };
+function renderOnboard() {
+  const people = OB.role ? ANTS.staff.filter(s => s.role === OB.role) : [];
+  const p = ANTS.staff.find(s => s.uid === OB.uid);
+  $("main").innerHTML = `<div class="gap24" style="padding-top:calc(32px + env(safe-area-inset-top))">
+    <div class="brand"><span class="brand__mark">${ico("paw")}</span><div><h1 class="t-major-title" style="color:var(--md3-on-surface)">Daily Reports</h1><p class="t-body-regular quiet">Animal facility · field reporting</p></div></div>
+    <section><div class="sec-h"><h2 class="t-minor-title">1 · What is your job?</h2></div>
+      <div class="role-grid">${Object.entries(ROLES).map(([k, r]) => `<button class="role ${OB.role === k ? "is-on" : ""}" data-a="obRole" data-v="${k}" aria-pressed="${OB.role === k}">
+        <span class="role__ico">${ico(r.icon)}</span><span><span class="t-minor-title" style="display:block">${r.l}</span><span class="t-subtext-regular quiet">${r.d}</span></span></button>`).join("")}</div></section>
+    ${OB.role ? `<section><div class="sec-h"><h2 class="t-minor-title">2 · Who are you?</h2></div>
+      <div class="k-opts">${people.map(s => `<button class="k-opt ${OB.uid === s.uid ? "is-on" : ""}" data-a="obWho" data-v="${s.uid}"><span class="avatar t-body-title">${initials(s.name)}</span>
+        <span class="k-opt__main"><span class="t-minor-medium">${esc(s.name)}</span><span class="t-subtext-regular quiet">${s.uid} · ${esc(site(s.site).name)} · ${esc(zoneOf(s.site, s.zone).name)}</span></span><span class="k-radio"></span></button>`).join("")}</div></section>` : ""}
+    ${p ? `<section><div class="sec-h"><h2 class="t-minor-title">3 · Your zone today</h2></div>
+      <div class="k-choice">${site(p.site).zones.map(z => `<button class="k-chip ${(OB.zone || p.zone) === z.code ? "is-on" : ""}" data-a="obZone" data-v="${z.code}">${esc(z.name)}</button>`).join("")}</div></section>` : ""}
+  </div>`;
+  $("bar").innerHTML = `<div class="k-actionbar"><div class="k-actionbar__in"><button class="k-btn k-btn--primary t-minor-medium" data-a="obGo" ${p ? "" : "disabled"}>Start reporting</button></div></div>`;
+}
+
+/* ---------- home: today's reports for my role ---------- */
+function renderHome() {
+  const m = me(), s = meStaff(), role = ROLES[m.role];
+  const daily = role.forms.filter(f => FORMS[f].per === "day");
+  const sent = daily.filter(f => todays(f).some(r => r.status === "sent")).length;
+  const pct = daily.length ? Math.round(sent / daily.length * 100) : 0;
+  const todayAll = mine().filter(r => r.date === TODAY());
+  const flags = todayAll.filter(r => r.status === "sent").reduce((n, r) => n + flagsOf(r).length, 0);
+  const C = 2 * Math.PI * 30;
+  const card = f => {
+    const F = FORMS[f], rs = todays(f), last = rs[0];
+    if (F.per === "day") {
+      const n = last ? withR(last, () => missingIn(F, last.data).length) : null;
+      return `<button class="k-rowcard" data-a="${last ? "open" : "new"}" data-v="${last ? last.id : f}">
+        <span class="k-rowcard__ico ${last && last.status === "sent" ? "k-rowcard__ico--ok" : ""}">${ico(last && last.status === "sent" ? "check" : F.icon)}</span>
+        <span class="k-rowcard__main"><span class="k-rowcard__t t-minor-title">${F.title}</span><span class="rowline">${statusPill(last)}<span class="k-rowcard__meta t-body-regular quiet">${!last ? "Once a day" : last.status === "sent" ? "at " + new Date(last.sentAt).toTimeString().slice(0, 5) : n ? n + " answer" + (n > 1 ? "s" : "") + " left" : "Ready to send"}</span></span></span>
+        <span class="k-rowcard__side">${ico("chev")}</span></button>`;
+    }
+    return `<div class="stack" style="gap:8px">
+      <button class="k-rowcard" data-a="new" data-v="${f}"><span class="k-rowcard__ico ${F.urgent ? "k-rowcard__ico--bad" : ""}">${ico(F.icon)}</span>
+        <span class="k-rowcard__main"><span class="k-rowcard__t t-minor-title">${F.title}</span><span class="k-rowcard__meta t-body-regular quiet">${rs.length ? rs.length + " today" : "As many as needed"}</span></span>
+        <span class="k-rowcard__side"><span class="k-pill k-pill--info t-body-medium">${ico("plus", "svg--sm")}New</span></span></button>
+      ${rs.map(r => `<button class="k-rowcard k-rowcard--sub" data-a="open" data-v="${r.id}" style="margin-left:24px;width:calc(100% - 24px)">
+        <span class="k-rowcard__main"><span class="k-rowcard__t t-body-title">${esc(subtitle(r))}</span><span class="k-rowcard__meta t-subtext-regular quiet">${new Date(r.created).toTimeString().slice(0, 5)}</span></span>
+        <span class="k-rowcard__side">${statusPill(r)}${ico("chev", "svg--sm")}</span></button>`).join("")}</div>`;
+  };
+  const urgent = role.forms.includes("inc");
+  $("main").innerHTML = `<header class="k-ph"><div class="k-ph__main"><h1 class="t-major-title" style="color:var(--md3-on-surface)">${longDay()}</h1>
+      <p class="k-ph__line t-body-regular"><span>${esc(site(m.site).name)}</span><span>${esc(zoneOf(m.site, m.zone).name)}</span></p></div>
+      <button class="who" data-a="go" data-v="profile" aria-label="Profile: ${esc(s.name)}"><span class="avatar t-body-title">${initials(s.name)}</span><span class="t-body-medium">${esc(s.name.split(" ").slice(-1)[0])}</span></button></header>
+    <div class="gap24">
+      <section class="k-card k-card--pad stack" style="gap:16px">
+        <div class="hero"><div class="k-ring" role="img" aria-label="${pct}% of daily reports sent"><svg width="72" height="72" viewBox="0 0 72 72"><circle class="k-ring__track" cx="36" cy="36" r="30" fill="none" stroke-width="8"/><circle class="k-ring__arc" cx="36" cy="36" r="30" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C - C * pct / 100}"/></svg><span class="t-minor-title" style="position:relative;color:var(--md3-on-surface)">${pct}%</span></div>
+          <div class="stack" style="gap:4px"><p class="t-minor-title">${sent === daily.length && daily.length ? "All daily reports sent" : `${daily.length - sent} daily report${daily.length - sent === 1 ? "" : "s"} to send`}</p><p class="t-body-regular quiet">${role.l} · ${ROLES[m.role].d}</p></div></div>
+        <div class="k-tiles"><div class="k-tile"><span class="t-subtext-regular">Sent today</span><span class="k-tile__n t-stat-title">${todayAll.filter(r => r.status === "sent").length}</span></div>
+          <div class="k-tile"><span class="t-subtext-regular">Drafts</span><span class="k-tile__n t-stat-title">${todayAll.filter(r => r.status === "draft").length}</span></div>
+          <div class="k-tile"><span class="t-subtext-regular">Flags raised</span><span class="k-tile__n t-stat-title ${flags ? "k-num--bad" : ""}">${flags}</span></div></div>
+      </section>
+      ${urgent ? `<button class="k-btn k-btn--alert k-btn--block k-btn--lg t-minor-title" data-a="new" data-v="inc">${ico("alert")}Report an incident now</button>` : ""}
+      <section><div class="sec-h"><h2 class="t-minor-title">Daily reports</h2></div><div class="stack">${daily.map(card).join("")}</div></section>
+      ${role.forms.filter(f => FORMS[f].per === "event" && f !== "inc").length ? `<section><div class="sec-h"><h2 class="t-minor-title">When needed</h2></div><div class="stack">${role.forms.filter(f => FORMS[f].per === "event" && f !== "inc").map(card).join("")}</div></section>` : ""}
+      ${todays("inc").length ? `<section><div class="sec-h"><h2 class="t-minor-title">Incidents today</h2></div><div class="stack">${card("inc")}</div></section>` : ""}
+    </div>`;
+  $("bar").innerHTML = tabbar("home");
+}
+function subtitle(r) {
+  const d = r.data;
+  if (r.form === "bio") return [d.w && d.w.encl && labelOf("encl", d.w.encl), d.w && d.w.type].filter(Boolean).join(" · ") || "New check";
+  if (r.form === "shift") return (d.a && d.a.animal ? labelOf("animal", d.a.animal) : "New move") + (d.a && d.a.status ? " · " + d.a.status : "");
+  if (r.form === "special") return (d.d && d.d.duty) || "New special duty";
+  if (r.form === "inc") return [(d.w && d.w.type) || "New incident", d.w && d.w.sev].filter(Boolean).join(" · ");
+  return FORMS[r.form].title;
+}
+
+/* ---------- form: one section per step ---------- */
+function renderForm() {
+  const r = report(VIEW.id); if (!r) return go({ name: "home" });
+  const F = FORMS[r.form], si = VIEW.step || 0, S = F.sections[si], scope = r.data[S.k] || {};
+  const miss = missingIn(F, r.data);
+  const steps = F.sections.map((s, i) => { const m = miss.some(x => x.si === i); const touched = r.data[s.k] && Object.keys(r.data[s.k]).length;
+    return `<button class="k-steps__s ${i === si ? "is-cur" : !m && touched ? "is-done" : VIEW.tried && m ? "is-bad" : ""}" data-a="step" data-v="${i}" aria-label="Step ${i + 1}: ${esc(s.l)}"></button>`; }).join("");
+  $("main").innerHTML = `<header class="k-ph k-ph--sticky"><div class="k-ph__main"><div style="display:flex;align-items:center;gap:4px">
+      <button class="k-ph__back" data-a="go" data-v="home" aria-label="Back to today">${ico("back")}</button>
+      <div style="min-width:0"><p class="t-subtext-regular quiet">${F.title} · step ${si + 1} of ${F.sections.length}</p><h1 class="t-medium-medium" style="color:var(--md3-on-surface)">${S.l}</h1></div></div>
+      <div class="k-steps">${steps}</div></div></header>
+    <div class="k-form__sec">${S.hint ? `<p class="t-body-regular quiet" style="margin-bottom:-8px">${S.hint}</p>` : ""}
+      ${S.fields.filter(f => visible(f, scope)).map(f => fieldHTML(f, S.k + "/" + f.k, scope[f.k], r)).join("")}</div>`;
+  const last = si === F.sections.length - 1;
+  $("bar").innerHTML = `<div class="k-actionbar"><div class="k-actionbar__in">
+    ${si > 0 ? `<button class="k-btn t-minor-medium" data-a="step" data-v="${si - 1}" aria-label="Previous step">${ico("back")}</button>` : ""}
+    <button class="k-btn k-btn--primary t-minor-medium" data-a="${last ? "review" : "step"}" data-v="${last ? r.id : si + 1}">${last ? "Review & send" : "Next"}${ico(last ? "check" : "chev")}</button></div></div>`;
+  hydrateClips();
+}
+
+function fieldHTML(f, p, v, r) {
+  const scopeData = r.data;
+  const miss = VIEW.tried && f.req && isEmpty(f, v, scopeData);
+  const lab = f.l ? `<div class="k-field__l t-body-title">${esc(f.l)}${f.req ? '<span class="req" aria-label="required">*</span>' : '<span class="t-subtext-regular muted">optional</span>'}</div>` : "";
+  const wrap = inner => `<div class="k-field ${miss ? "is-missing" : ""}">${lab}${inner}</div>`;
+  const chip = (val, on, bad, act, extra) => `<button class="k-chip t-minor-medium ${on ? "is-on" : ""} ${on && bad ? "is-bad" : ""}" data-a="${act}" data-p="${p}" data-v="${esc(val)}" aria-pressed="${!!on}" ${extra || ""}>${act === "multi" || act === "phrase" ? `<span class="tick">${ico("check")}</span>` : ""}${esc(val)}</button>`;
+  const radio = (val, label, sub, on, bad) => `<button class="k-opt k-opt--sm ${on ? "is-on" : ""} ${on && bad ? "is-bad" : ""}" data-a="seg" data-p="${p}" data-v="${esc(val)}" role="radio" aria-checked="${!!on}"><span class="k-radio"></span>
+    <span class="k-opt__main"><span class="t-minor-medium">${esc(label)}</span>${sub ? `<span class="t-subtext-regular quiet">${esc(sub)}</span>` : ""}</span></button>`;
+  const tickRow = (val, label, sub, on) => `<button class="k-opt k-opt--sm ${on ? "is-on" : ""}" data-a="multi" data-p="${p}" data-v="${esc(val)}" aria-pressed="${!!on}"><span class="k-box">${ico("check")}</span>
+    <span class="k-opt__main"><span class="t-minor-medium">${esc(label)}</span>${sub ? `<span class="t-subtext-regular quiet">${esc(sub)}</span>` : ""}</span></button>`;
+  const other = () => v === "Other" ? fieldHTML({ t: "text", k: "_o", l: "Describe ‘Other’", req: 1 }, p + "_o", getP(r.data, p + "_o"), r) : "";
+  switch (f.t) {
+    case "seg": {
+      const big = f.o.length <= 3 && f.o.every(o => o.length <= 16);
+      return wrap((big ? `<div class="yn" style="--n:${f.o.length}" role="radiogroup">${f.o.map(o => chip(o, v === o, (f.bad || []).includes(o), "seg", 'role="radio"')).join("")}</div>`
+        : `<div class="radios" role="radiogroup">${f.o.map(o => radio(o, o, "", v === o, (f.bad || []).includes(o))).join("")}</div>`)) + other();
+    }
+    case "yn": return wrap(`<div class="yn" role="radiogroup">${YN.map(o => chip(o, v === o, (f.bad || []).includes(o), "seg", 'role="radio"')).join("")}</div>`);
+    case "multi": return wrap(`<p class="t-subtext-regular quiet" style="margin-top:-4px">Tap all that apply</p><div class="k-choice">${f.o.map(o => chip(o, (v || []).includes(o), (f.bad || []).includes(o), "multi")).join("")}</div>`);
+    case "text": {
+      const live = DICT && DICT.p === p;
+      return wrap(`<div class="txtrow"><input class="k-inp t-minor-regular ${live ? "is-live" : ""}" data-a="txt" data-p="${p}" value="${esc(v || "")}" placeholder="${esc(live ? "Listening… speak now" : f.ph || "Type here")}" autocomplete="off">
+        ${SR ? `<button class="k-btn ${live ? "k-btn--live" : ""}" data-a="dict" data-p="${p}" aria-label="${live ? "Stop speaking" : "Speak to type"}">${ico(live ? "stop" : "mic")}</button>` : ""}</div>`);
+    }
+    case "check": return `<button class="k-opt ${v ? "is-on" : ""} ${miss ? "is-missing" : ""}" data-a="check" data-p="${p}" aria-pressed="${!!v}" ${miss ? 'style="border-color:var(--md3-error)"' : ""}><span class="k-box">${ico("check")}</span><span class="k-opt__main"><span class="t-minor-medium">${esc(f.l)}${f.req ? ' <span style="color:var(--md3-error)">*</span>' : ""}</span></span></button>`;
+    case "time": return wrap(`<div class="timebox"><button class="k-inp k-sel ${v ? "" : "is-empty"}" data-a="time" data-p="${p}">${ico("clock")}<span class="k-sel__v t-minor-medium timebox__v">${v || "Tap to set time"}</span>${ico("down", "svg--sm")}</button>
+      <button class="k-btn t-body-medium" data-a="now" data-p="${p}">Now</button></div>`);
+    case "num": return wrap(`<div class="stepper"><button data-a="num" data-p="${p}" data-v="-1" aria-label="Less">${ico("minus")}</button><output class="t-medium-medium">${v || 0}</output><button data-a="num" data-p="${p}" data-v="1" aria-label="More">${ico("plus")}</button></div>`);
+    case "pick": {
+      /* my zone inline as radio / tick rows; anything else on the site through the sheet */
+      const vals = f.multi ? (v || []) : (v ? [v] : []), near = pickOpts(f.src, true), all = pickOpts(f.src, false);
+      const rows = near.concat(vals.filter(x => !near.some(o => o[0] === x)).map(x => [x, labelOf(f.src, x), "Other zone"]));
+      return wrap(`${f.multi ? '<p class="t-subtext-regular quiet" style="margin-top:-4px">Tap all that apply</p>' : ""}<div class="radios radios--1" ${f.multi ? "" : 'role="radiogroup"'}>${rows.map(([id, t, sub]) => f.multi ? tickRow(id, t, sub, vals.includes(id)) : radio(id, t, sub, v === id)).join("")}</div>
+        ${all.length > near.length ? `<button class="k-btn k-btn--ghost t-body-medium more-link" data-a="pick" data-p="${p}">${ico("search", "svg--sm")}${f.src === "staff" ? "Someone else on this site" : "Other zones on this site"}</button>` : ""}`);
+    }
+    case "note": {
+      const n = v || {}, tp = p + "/txt", recOn = REC && REC.p === p, live = DICT && DICT.p === tp;
+      const voice = recOn ? `<button class="k-btn k-btn--rec k-btn--block t-minor-medium" style="height:56px" data-a="recStop"><span class="recdot"></span>Recording <span data-rec-t>0:00</span> · tap to stop</button>`
+        : `<div class="voice">${CAN_REC ? `<button class="k-btn t-minor-medium" data-a="rec" data-p="${p}" ${REC ? "disabled" : ""}>${ico("mic")}Voice message</button>` : ""}
+           ${SR ? `<button class="k-btn ${live ? "k-btn--live" : ""} t-minor-medium" data-a="dict" data-p="${tp}" data-note="${p}">${ico(live ? "stop" : "speak")}${live ? "Stop" : "Speak to type"}</button>`
+                : `<button class="k-btn t-minor-medium" data-a="openTxt" data-p="${p}">${ico("kbd")}Type a note</button>`}</div>`;
+      return wrap(`${(f.o || []).length ? `<div class="k-choice">${f.o.map(o => chip(o, (n.p || []).includes(o), false, "phrase")).join("")}</div>` : ""}${voice}
+        ${(n.clips || []).length ? `<div class="clips">${n.clips.map((c, i) => `<div class="clip">${ico("mic", "svg--sm")}<audio controls preload="metadata" data-clip="${c.id}"></audio>
+          <span class="t-subtext-regular quiet">${fmtDur(c.dur)}</span><button class="k-btn k-btn--ghost k-btn--danger" data-a="clipDel" data-p="${p}" data-v="${c.id}" aria-label="Delete voice message ${i + 1}">${ico("trash", "svg--sm")}</button></div>`).join("")}</div>` : ""}
+        ${n.open || n.txt || live ? `<textarea class="k-inp t-minor-regular ${live ? "is-live" : ""}" data-a="txt" data-p="${tp}" placeholder="${live ? "Listening… speak now" : "Type here"}" rows="3">${esc(n.txt || "")}</textarea>`
+          : SR ? `<button class="k-btn k-btn--ghost t-body-medium more-link" data-a="openTxt" data-p="${p}">${ico("kbd", "svg--sm")}Type instead</button>` : ""}`);
+    }
+    case "tasks": {
+      const d = v || {}; const all = DAY_TASKS.flatMap(g => g[1]); const n = all.filter(t => d[t[0]]).length;
+      return `<div class="bar-tools"><span class="k-pill ${n === all.length ? "k-pill--ok" : ""} t-body-medium">${n} of ${all.length} done</span></div>` + DAY_TASKS.map(([g, ts]) =>
+        `<div class="k-field"><div class="k-field__l t-subtext-title" style="text-transform:uppercase;letter-spacing:.06em">${g}</div><div class="k-opts">${ts.map(([id, tm, t, s]) => `<button class="k-opt ${d[id] ? "is-on k-opt--done" : ""}" data-a="task" data-p="${p}/${id}" aria-pressed="${!!d[id]}">
+          <span class="k-box">${ico("check")}</span><span class="k-opt__main"><span class="t-minor-medium">${esc(t)}</span><span class="t-subtext-regular quiet">${d[id] ? "Done at " + d[id] : "Planned " + tm}</span></span>
+          ${s ? '<span class="k-opt__side"><span class="k-tag k-tag--safety t-subtext-title">Safety</span></span>' : ""}</button>`).join("")}</div></div>`).join("");
+    }
+    case "audit": {
+      const items = auditItems(f, scopeData), d = v || {};
+      if (!items.length) return wrap(`<div class="k-empty">${ico("clip")}<p class="t-body-regular">Choose what you checked on the previous step first.</p></div>`);
+      const ok = items.filter((_, i) => d[i] === "OK").length, bad = items.filter((_, i) => d[i] === "Concern").length;
+      return wrap(`<div class="bar-tools"><span class="t-body-regular quiet">${ok} OK · <span style="color:${bad ? "var(--md3-error)" : "inherit"}">${bad} concern${bad === 1 ? "" : "s"}</span> · ${items.length - ok - bad} left</span>
+        <button class="k-btn t-body-medium" data-a="allOk" data-p="${p}" data-v="${items.length}">${ico("check", "svg--sm")}Mark rest OK</button></div>
+        <div class="audit">${items.map((it, i) => `<div class="audit__row ${d[i] === "Concern" ? "is-bad" : ""}"><span class="t-minor-regular">${esc(it)}</span>
+          <div class="k-seg">${["OK", "Concern"].map(o => `<button class="k-seg__b t-body-medium ${d[i] === o ? "is-on" : ""} ${o === "Concern" ? "is-bad" : ""}" data-a="seg" data-p="${p}/${i}" data-v="${o}" aria-pressed="${d[i] === o}">${o}</button>`).join("")}</div></div>`).join("")}</div>`);
+    }
+    case "roster": {
+      const d = v || {}, list = zoneAnimals();
+      const done = list.filter(a => d[a.id] && d[a.id].ate && d[a.id].h).length;
+      return `<div class="bar-tools"><span class="k-pill ${done === list.length ? "k-pill--ok" : ""} t-body-medium">${done} of ${list.length} animals</span>
+        <button class="k-btn t-body-medium" data-a="allNormal" data-p="${p}">${ico("check", "svg--sm")}All normal</button></div>
+        ${VIEW.tried && done < list.length ? `<p class="t-body-medium" style="color:var(--md3-error)">Answer both questions for every animal.</p>` : ""}
+        <div class="stack">${list.map(a => { const x = d[a.id] || {}; const bad = x.ate === "None" || x.h === "Concern"; const full = x.ate && x.h;
+          const sg = (k, opts, badv) => `<div class="k-seg">${opts.map(o => `<button class="k-seg__b t-body-medium ${x[k] === o ? "is-on" : ""} ${badv.includes(o) ? "is-bad" : ""}" data-a="seg" data-p="${p}/${a.id}/${k}" data-v="${o}" aria-pressed="${x[k] === o}">${o}</button>`).join("")}</div>`;
+          return `<div class="ani ${bad ? "is-bad" : full ? "is-ok" : ""}"><div class="ani__h"><span class="k-rowcard__ico ${bad ? "k-rowcard__ico--bad" : full ? "k-rowcard__ico--ok" : ""}">${ico(full && !bad ? "check" : "paw")}</span>
+            <span class="k-rowcard__main"><span class="t-minor-title">${esc(a.name)}</span><span class="t-subtext-regular quiet">${esc(a.species)} · ${a.encl.code} ${esc(a.encl.name)}</span></span></div>
+            <div class="ani__grid"><div><span class="ani__cap t-subtext-title">Ate</span>${sg("ate", ["All", "Part", "None"], ["None"])}</div><div><span class="ani__cap t-subtext-title">Health</span>${sg("h", ["OK", "Concern"], ["Concern"])}</div></div>
+            ${x.h === "Concern" ? `<div class="k-field"><span class="t-subtext-title">What did you see?</span><div class="k-choice">${OBS_TAGS.map(o => chip(o, (x.tags || []).includes(o), true, "multi").replace(`data-p="${p}"`, `data-p="${p}/${a.id}/tags"`)).join("")}</div></div>
+              ${fieldHTML({ t: "note", k: "note", l: "Note" }, `${p}/${a.id}/note`, x.note, r)}` : ""}</div>`; }).join("")}</div>`;
+    }
+    case "attend": {
+      const d = v || {}, list = staffHere(); const n = list.filter(s => d[s.uid]).length;
+      return `<div class="bar-tools"><span class="k-pill ${n === list.length ? "k-pill--ok" : ""} t-body-medium">${n} of ${list.length} marked</span>
+        <button class="k-btn t-body-medium" data-a="allPresent" data-p="${p}">${ico("check", "svg--sm")}Rest present</button></div>
+        <div class="stack">${list.map(s => `<div class="ani ${d[s.uid] === "Absent" ? "is-bad" : d[s.uid] ? "is-ok" : ""}"><div class="ani__h"><span class="avatar t-body-title">${initials(s.name)}</span>
+          <span class="k-rowcard__main"><span class="t-minor-title">${esc(s.name)}</span><span class="t-subtext-regular quiet">${ROLES[s.role].l} · ${esc(zoneOf(s.site, s.zone).name)}</span></span></div>
+          <div class="k-choice">${ATT.map(o => chip(o, d[s.uid] === o, o === "Absent", "seg").replace(`data-p="${p}"`, `data-p="${p}/${s.uid}"`)).join("")}</div></div>`).join("")}</div>`;
+    }
+    case "group": {
+      const items = v || [];
+      return `<div class="k-field ${VIEW.tried && f.min && items.length < f.min ? "is-missing" : ""}">${lab.replace('<span class="t-subtext-regular muted">optional</span>', "")}
+        ${items.map((it, i) => `<div class="grp"><div class="grp__h"><span class="t-minor-title" style="color:var(--md3-on-surface)">${f.item} ${i + 1}</span>
+          <button class="k-btn k-btn--ghost k-btn--danger t-body-medium" data-a="delItem" data-p="${p}" data-v="${i}" aria-label="Remove ${f.item} ${i + 1}">${ico("trash", "svg--sm")}Remove</button></div>
+          ${f.fields.filter(sf => visible(sf, it)).map(sf => fieldHTML(sf, `${p}/${i}/${sf.k}`, it[sf.k], r)).join("")}</div>`).join("")}
+        <button class="k-btn k-btn--dashed k-btn--block k-btn--lg t-minor-medium" data-a="addItem" data-p="${p}">${ico("plus")}${f.add}</button></div>`;
+    }
+  }
+  return "";
+}
+
+/* ---------- review: answers, flags, what is missing, send ---------- */
+function summaryHTML(r) {
+  const F = FORMS[r.form];
+  const fmt = (f, v, data, sc) => {
+    if (isEmpty(f, v, data) && f.t !== "num" && f.t !== "tasks") return null;
+    switch (f.t) {
+      case "seg": return v === "Other" && sc && sc[f.k + "_o"] ? `Other: ${sc[f.k + "_o"]}` : String(v);
+      case "multi": return v.join(", ");
+      case "pick": return f.multi ? v.map(x => labelOf(f.src, x)).join(", ") : labelOf(f.src, v);
+      case "check": return "Yes";
+      case "note": return noteStr(v);
+      case "tasks": { const all = DAY_TASKS.flatMap(g => g[1]); const n = all.filter(t => (v || {})[t[0]]).length; const miss = all.filter(t => !(v || {})[t[0]]).map(t => t[2]);
+        return `${n} of ${all.length} done` + (miss.length ? ` · not done: ${miss.join(", ")}` : ""); }
+      case "audit": { const it = auditItems(f, data); const c = it.filter((_, i) => v[i] === "Concern"); return `${it.length - c.length} OK` + (c.length ? ` · concern: ${c.join(", ")}` : ""); }
+      case "roster": { const list = zoneAnimals(); const issues = list.filter(a => (v[a.id] || {}).ate === "None" || (v[a.id] || {}).h === "Concern" || (v[a.id] || {}).ate === "Part");
+        return `${list.length - issues.length} of ${list.length} normal` + (issues.length ? " · " + issues.map(a => `${a.name}: ate ${(v[a.id].ate || "?").toLowerCase()}, ${v[a.id].h === "Concern" ? (v[a.id].tags || []).join(", ") || "concern" : "health OK"}${v[a.id].note && noteStr(v[a.id].note) ? ` (${noteStr(v[a.id].note)})` : ""}`).join("; ") : ""); }
+      case "attend": { const c = {}; Object.values(v).forEach(x => c[x] = (c[x] || 0) + 1); return Object.entries(c).map(([k, n]) => `${k} ${n}`).join(" · "); }
+      default: return String(v);
+    }
+  };
+  return F.sections.map(s => {
+    const sc = r.data[s.k] || {};
+    const rows = s.fields.filter(f => visible(f, sc)).map(f => {
+      const v = sc[f.k];
+      if (f.t === "group") return (v || []).map((it, i) => `<div class="sum-item"><p class="t-body-title" style="margin-bottom:8px">${f.item} ${i + 1}</p><dl class="k-kv">${f.fields.filter(sf => visible(sf, it)).map(sf => {
+        const t = fmt(sf, it[sf.k], r.data, it), bad = badOf(sf, it[sf.k], r.data).length;
+        return `<dt class="t-body-regular quiet">${esc(sf.l)}</dt><dd class="t-body-medium ${bad ? "is-bad" : ""} ${t == null && sf.req ? "is-miss" : ""}">${t == null ? (sf.req ? "Missing" : "—") : esc(t)}${clipPlayers(it[sf.k])}</dd>`; }).join("")}</dl></div>`).join("") || `<p class="t-body-regular quiet">No ${f.item.toLowerCase()} added.</p>`;
+      const t = fmt(f, v, r.data, sc), bad = badOf(f, v, r.data).length;
+      return `<dl class="k-kv"><dt class="t-body-regular quiet">${esc(f.l || s.l)}</dt><dd class="t-body-medium ${bad ? "is-bad" : ""} ${t == null && f.req ? "is-miss" : ""}">${t == null ? (f.req ? "Missing" : "—") : esc(t)}${clipPlayers(v)}</dd></dl>`;
+    }).join("");
+    return `<div class="sum-sec"><h3 class="t-minor-title" style="color:var(--md3-on-surface)">${s.l}</h3>${rows}</div>`;
+  }).join("");
+}
+function renderReview() {
+  const r = report(VIEW.id); if (!r) return go({ name: "home" });
+  const F = FORMS[r.form], miss = missingIn(F, r.data), flags = flagsIn(F, r.data), sent = r.status === "sent";
+  const by = ANTS.staff.find(s => s.uid === r.by);
+  $("main").innerHTML = `<header class="k-ph k-ph--sticky"><div class="k-ph__main"><div style="display:flex;align-items:center;gap:4px">
+      <button class="k-ph__back" data-a="${sent || VIEW.from ? "go" : "step"}" data-v="${sent || VIEW.from ? VIEW.from || "home" : F.sections.length - 1}" aria-label="Back">${ico("back")}</button>
+      <div style="min-width:0"><p class="t-subtext-regular quiet">${sent ? "Sent report" : "Review before sending"}</p><h1 class="t-medium-medium" style="color:var(--md3-on-surface)">${F.title}</h1></div></div>
+      <p class="k-ph__line t-body-regular"><span>${fmtDay(r.date)}</span><span>${esc(by ? by.name : r.by)}</span><span>${esc(zoneOf(r.site, r.zone) ? zoneOf(r.site, r.zone).name : r.zone)}</span>${sent ? `<span>sent ${new Date(r.sentAt).toTimeString().slice(0, 5)}</span>` : ""}</p></div></header>
+    <div class="gap24">
+      ${miss.length ? `<div class="k-card k-card--pad stack" style="border-color:var(--md3-error)"><p class="t-minor-title" style="color:var(--md3-error)">${miss.length} answer${miss.length > 1 ? "s" : ""} still needed</p>
+        <div class="k-opts">${miss.slice(0, 8).map(m => `<button class="k-opt" data-a="fix" data-v="${m.si}"><span class="k-opt__main"><span class="t-body-medium">${esc(m.l)}</span><span class="t-subtext-regular quiet">${F.sections[m.si].l}</span></span>${ico("chev", "svg--sm")}</button>`).join("")}</div></div>` : ""}
+      ${flags.length ? `<div class="flagbox">${ico("alert")}<div><p class="t-minor-title">${flags.length} flag${flags.length > 1 ? "s" : ""} in this report</p><ul class="t-body-regular">${flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></div>`
+        : miss.length ? "" : `<div class="okbox">${ico("check")}<p class="t-minor-medium">Nothing flagged. All normal.</p></div>`}
+      <section class="k-card k-card--pad stack" style="gap:16px">${summaryHTML(r)}</section>
+      ${!sent ? `<button class="k-btn k-btn--ghost k-btn--danger t-body-medium" style="align-self:center" data-a="discard" data-v="${r.id}">${ico("trash", "svg--sm")}Discard draft</button>` : ""}
+    </div>`;
+  $("bar").innerHTML = `<div class="k-actionbar"><div class="k-actionbar__in">${sent
+    ? `<button class="k-btn t-minor-medium" data-a="copy" data-v="${r.id}">${ico("copy")}Copy</button><button class="k-btn k-btn--primary t-minor-medium" data-a="share" data-v="${r.id}">${ico("share")}Share report</button>`
+    : `<button class="k-btn t-minor-medium" data-a="step" data-v="0" aria-label="Edit answers">${ico("edit")}Edit</button><button class="k-btn k-btn--brand t-minor-medium" data-a="send" data-v="${r.id}" ${miss.length ? "disabled" : ""}>${ico("send")}Send report</button>`}</div></div>`;
+  hydrateClips(); if (sent) prepareShare(r);
+}
+
+/* ---------- history ---------- */
+function renderHistory() {
+  const list = mine().slice().sort((a, b) => b.created - a.created);
+  const days = [...new Set(list.map(r => r.date))];
+  $("main").innerHTML = `<header class="k-ph"><div class="k-ph__main"><h1 class="t-major-title" style="color:var(--md3-on-surface)">History</h1><p class="t-body-regular">Your reports on this device</p></div></header>
+    <div class="gap24">${days.length ? days.map(d => `<section><div class="sec-h"><h2 class="t-minor-title">${fmtDay(d)}</h2><span class="t-body-regular quiet">${list.filter(r => r.date === d).length} reports</span></div>
+      <div class="stack">${list.filter(r => r.date === d).map(r => { const F = FORMS[r.form], fl = flagsOf(r).length;
+        return `<button class="k-rowcard" data-a="view" data-v="${r.id}"><span class="k-rowcard__ico ${fl ? "k-rowcard__ico--bad" : ""}">${ico(F.icon)}</span>
+          <span class="k-rowcard__main"><span class="k-rowcard__t t-minor-title">${F.title}</span><span class="rowline">${statusPill(r)}<span class="k-rowcard__meta t-body-regular quiet">${esc(subtitle(r) === F.title ? new Date(r.created).toTimeString().slice(0, 5) : subtitle(r))}${fl ? ` · <span style="color:var(--md3-error)">${fl} flag${fl > 1 ? "s" : ""}</span>` : ""}</span></span></span>
+          <span class="k-rowcard__side">${ico("chev")}</span></button>`; }).join("")}</div></section>`).join("")
+      : `<div class="k-empty">${ico("hist")}<p class="t-minor-medium">No reports yet</p><p class="t-body-regular quiet">Reports you start or send will show here.</p></div>`}</div>`;
+  $("bar").innerHTML = tabbar("history");
+}
+
+/* ---------- profile ---------- */
+function renderProfile() {
+  const m = me(), s = meStaff();
+  $("main").innerHTML = `<header class="k-ph"><div class="k-ph__main"><h1 class="t-major-title" style="color:var(--md3-on-surface)">Me</h1></div></header>
+    <div class="gap24"><section class="k-card k-card--pad stack" style="gap:16px"><div class="hero"><span class="avatar t-minor-title" style="width:56px;height:56px">${initials(s.name)}</span>
+      <div><p class="t-minor-title">${esc(s.name)}</p><p class="t-body-regular quiet">${s.uid} · ${ROLES[m.role].l}</p></div></div>
+      <dl class="k-kv"><dt class="t-body-regular quiet">Site</dt><dd class="t-body-medium">${esc(site(m.site).name)}</dd><dt class="t-body-regular quiet">Zone today</dt><dd class="t-body-medium">${esc(zoneOf(m.site, m.zone).name)}</dd></dl></section>
+      <section><div class="sec-h"><h2 class="t-minor-title">Change zone for today</h2></div><div class="k-choice">${site(m.site).zones.map(z => `<button class="k-chip t-minor-medium ${m.zone === z.code ? "is-on" : ""}" data-a="setZone" data-v="${z.code}">${esc(z.name)}</button>`).join("")}</div></section>
+      <div class="stack"><button class="k-btn k-btn--block t-minor-medium" data-a="signout">${ico("user")}Switch person</button>
+      <button class="k-btn k-btn--block k-btn--danger t-minor-medium" data-a="wipe">${ico("trash")}Clear all reports on this device</button></div>
+      <p class="t-subtext-regular quiet" style="text-align:center">Drafts stay on this phone. Sent reports go to your team, and wait here when there is no signal. Sample site data stands in for the facility system.</p></div>`;
+  $("bar").innerHTML = tabbar("profile");
+}
+function renderStart() { go({ name: "home" }); }
+
+/* =====================================================================
+   VOICE — voice messages (kept as audio, in IndexedDB on this device) and speak-to-type (browser speech recognition).
+   ===================================================================== */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const CAN_REC = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+const fmtDur = s => Math.floor((s || 0) / 60) + ":" + pad((s || 0) % 60);
+const noteStr = v => !v ? "" : [...(v.p || []), (v.txt || "").trim(), (v.clips || []).length ? `🎤 ${v.clips.length} voice message${v.clips.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(". ");
+const clipsOf = o => !o || typeof o !== "object" ? [] : Object.entries(o).flatMap(([k, v]) => k === "clips" && Array.isArray(v) ? v : clipsOf(v));
+const clipPlayers = v => { const c = clipsOf(v); return c.length ? `<div class="sum-clips">${c.map(x => `<audio controls preload="metadata" data-clip="${x.id}"></audio>`).join("")}</div>` : ""; };
+const IDB = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { try { const q = indexedDB.open("drs-lite-audio", 1); q.onupgradeneeded = () => q.result.createObjectStore("clips"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); } catch (e) { rej(e); } }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction("clips", mode); const q = fn(t.objectStore("clips")); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+  return { put: (id, b) => tx("readwrite", st => st.put(b, id)), get: id => tx("readonly", st => st.get(id)), del: id => tx("readwrite", st => st.delete(id)).catch(() => {}) };
+})();
+const CLIPURL = {};
+function hydrateClips() {
+  document.querySelectorAll("audio[data-clip]").forEach(async el => {
+    const id = el.dataset.clip;
+    if (!CLIPURL[id]) { try { const b = await IDB.get(id); if (b) CLIPURL[id] = URL.createObjectURL(b); } catch (e) {} }
+    if (!CLIPURL[id] && API) { try { const res = await api("clips/" + id); if (res.ok) { const b = await res.blob(); CLIPURL[id] = URL.createObjectURL(b); IDB.put(id, b).catch(() => {}); } } catch (e) {} }
+    if (CLIPURL[id]) el.src = CLIPURL[id];
+    else { const s = document.createElement("span"); s.className = "t-body-regular quiet"; s.textContent = "Voice message not on this device"; el.replaceWith(s); }
+  });
+}
+const renderIfForm = () => { if (VIEW.name === "form") renderForm(); };
+
+let REC = null;
+async function startRec(p) {
+  if (REC) return;
+  stopDict();
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return toast("Microphone blocked. Allow it in your browser settings."); }
+  const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
+  let mr; try { mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : undefined); } catch (e) { stream.getTracks().forEach(t => t.stop()); return toast("Voice recording is not supported here"); }
+  const chunks = [], rid = VIEW.id, t0 = Date.now();
+  REC = { p, mr, t0 };
+  mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop()); clearInterval(REC && REC.tick);
+    const dur = Math.round((Date.now() - t0) / 1000), blob = new Blob(chunks, { type: mr.mimeType || mime || "audio/webm" }); REC = null;
+    if (dur < 1 || !blob.size) { toast("Too short. Hold on a little longer."); return renderIfForm(); }
+    const id = "clip-" + uid();
+    try { await IDB.put(id, blob); } catch (e) { toast("Could not save the voice message on this device"); return renderIfForm(); }
+    const r = report(rid); const clips = (getP(r.data, p + "/clips") || []).slice(); clips.push({ id, dur, type: blob.type }); setP(r.data, p + "/clips", clips); save(r);
+    toast("Voice message saved"); renderIfForm();
+  };
+  mr.start(1000);
+  REC.tick = setInterval(() => { const sec = Math.floor((Date.now() - t0) / 1000); document.querySelectorAll("[data-rec-t]").forEach(el => el.textContent = fmtDur(sec)); if (sec >= 180) stopRec(); }, 250);
+  renderForm();
+}
+function stopRec() { if (REC && REC.mr.state !== "inactive") REC.mr.stop(); }
+
+let DICT = null;
+function startDict(p, notePath) {
+  if (DICT) { const same = DICT.p === p; stopDict(); if (same) return; }
+  if (REC) return toast("Stop the recording first");
+  const r = cur(); if (notePath) setP(r.data, notePath + "/open", true);
+  const rec = new SR(); rec.lang = navigator.language || "en-IN"; rec.continuous = true; rec.interimResults = true;
+  const base = (getP(r.data, p) || "").trim(); let fin = "";
+  DICT = { p, rec };
+  rec.onresult = e => {
+    let interim = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) fin += t.trim() + " "; else interim += t; }
+    const el = document.querySelector(`[data-a="txt"][data-p="${p}"]`); if (el) el.value = [base, (fin + interim).trim()].filter(Boolean).join(" ");
+    setP(r.data, p, [base, fin.trim()].filter(Boolean).join(" ")); save(r);
+  };
+  rec.onerror = e => { toast(e.error === "not-allowed" || e.error === "service-not-allowed" ? "Microphone blocked. Allow it in your browser settings." : e.error === "network" ? "Speak-to-type needs signal. Record a voice message instead." : e.error === "no-speech" ? "Didn't hear anything. Try again." : "Speak-to-type stopped"); };
+  rec.onend = () => { if (DICT && DICT.rec === rec) { DICT = null; renderIfForm(); } };
+  try { rec.start(); } catch (e) { DICT = null; return toast("Could not start speak-to-type"); }
+  renderForm();
+  const el = document.querySelector(`[data-a="txt"][data-p="${p}"]`); if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+function stopDict() { if (DICT) { const d = DICT; DICT = null; try { d.rec.stop(); } catch (e) {} renderIfForm(); } }
+function stopVoice() { stopRec(); if (DICT) { const d = DICT; DICT = null; try { d.rec.stop(); } catch (e) {} } }
+
+/* =====================================================================
+   SHEETS — time and list pickers
+   ===================================================================== */
+let SHEET = null;
+function openSheet(html) { $("sheet").innerHTML = `<div class="k-sheet__grab"></div>` + html; $("scrim").hidden = false; document.body.style.overflow = "hidden"; }
+function closeSheet() { $("scrim").hidden = true; SHEET = null; document.body.style.overflow = ""; }
+$("scrim").addEventListener("click", e => { if (e.target === $("scrim")) closeSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("scrim").hidden) closeSheet(); });
+
+function timeSheet() {
+  const [h, m] = (SHEET.val || nowHM()).split(":").map(Number);
+  const hours = [...Array(24)].map((_, i) => (i + 5) % 24); // working day first: 05 … 04
+  openSheet(`<div class="k-sheet__h"><div><h2 class="t-medium-medium" style="color:var(--md3-on-surface)">${esc(SHEET.label)}</h2><p class="t-body-regular quiet">Tap the hour, then the minutes</p></div>
+      <span class="t-stat-title" style="color:var(--md3-on-surface);font-variant-numeric:tabular-nums">${pad(h)}:${pad(m)}</span></div>
+    <div class="k-sheet__b"><div class="k-choice">${[["Now", 0], ["15 min ago", 15], ["30 min ago", 30], ["1 hr ago", 60]].map(([l, n]) => `<button class="k-chip t-body-medium" data-a="tAgo" data-v="${n}">${l}</button>`).join("")}</div>
+      <div><p class="t-subtext-title grp-l" style="margin-bottom:8px">HOUR</p><div class="grid-h">${hours.map(x => `<button class="k-chip t-minor-medium ${x === h ? "is-on" : ""}" data-a="tH" data-v="${x}">${pad(x)}</button>`).join("")}</div></div>
+      <div><p class="t-subtext-title" style="margin-bottom:8px">MINUTE</p><div class="grid-h">${[...Array(12)].map((_, i) => i * 5).map(x => `<button class="k-chip t-minor-medium ${x === m ? "is-on" : ""}" data-a="tM" data-v="${x}">${pad(x)}</button>`).join("")}</div></div></div>
+    <div class="k-sheet__f"><button class="k-btn k-btn--primary t-minor-medium" data-a="tDone">Done</button></div>`);
+}
+function pickSheet() {
+  const { src, multi, label } = SHEET; const sel = SHEET.sel;
+  let groups = [];
+  if (src === "animal") { const enc = siteEncl(); const mz = me().zone; enc.sort((a, b) => (b.zone.code === mz) - (a.zone.code === mz));
+    groups = enc.map(e => [`${e.code} · ${e.name}`, e.animals.map(([id, name, sp]) => [id, name, sp])]); }
+  if (src === "encl") groups = site(me().site).zones.map(z => [z.name, z.encl.map(e => [e.code, `${e.code} · ${e.name}`, e.animals.map(a => a[1]).join(", ")])]);
+  if (src === "staff") groups = [["People on this site", ANTS.staff.filter(s => s.site === me().site && s.uid !== me().uid).map(s => [s.uid, s.name, `${ROLES[s.role].l} · ${zoneOf(s.site, s.zone).name}`])]];
+  openSheet(`<div class="k-sheet__h"><div><h2 class="t-medium-medium" style="color:var(--md3-on-surface)">${esc(label)}</h2><p class="t-body-regular quiet">${multi ? "Tap all that apply" : "Tap one"}</p></div>
+      <button class="k-btn k-btn--ghost" data-a="sheetX" aria-label="Close">${ico("x")}</button></div>
+    <div class="k-sheet__b">${groups.map(([g, items]) => `<div class="stack" style="gap:8px"><p class="t-subtext-title quiet" style="text-transform:uppercase;letter-spacing:.06em">${esc(g)}</p>
+      <div class="k-opts">${items.map(([id, t, sub]) => `<button class="k-opt ${sel.includes(id) ? "is-on" : ""}" data-a="pickOne" data-v="${esc(id)}" aria-pressed="${sel.includes(id)}">
+        <span class="k-opt__main"><span class="t-minor-medium">${esc(t)}</span>${sub ? `<span class="t-subtext-regular quiet">${esc(sub)}</span>` : ""}</span>${multi ? `<span class="k-box">${ico("check")}</span>` : `<span class="k-radio"></span>`}</button>`).join("")}</div></div>`).join("")}</div>
+    ${multi ? `<div class="k-sheet__f"><button class="k-btn t-minor-medium" data-a="pickClear">Clear</button><button class="k-btn k-btn--primary t-minor-medium" data-a="pickDone">Done${sel.length ? " · " + sel.length : ""}</button></div>` : ""}`);
+}
+
+/* =====================================================================
+   SYNC — sent reports go to the team store (Cloudflare D1 behind /api); teammates' reports come back.
+   Offline-first: a sent report waits in the outbox until there is signal. Drafts never leave the phone.
+   ===================================================================== */
+const API = location.protocol.startsWith("http") ? "api/" : null;   // opened as a file: no team store
+let SYNC = { state: API ? "idle" : "off", at: 0 };
+const api = (path, opts = {}) => fetch(API + path, Object.assign({}, opts, { headers: Object.assign({ "x-team-code": DB.code || "" }, opts.headers || {}) }));
+const teamScope = () => me().role === "keeper" ? { site: me().site, zone: me().zone } : { site: me().site };   // keepers: their zone; everyone else: the whole site
+let syncing = null;
+function sync(manual) {
+  if (!API || !me()) return Promise.resolve();
+  if (syncing) return syncing;
+  if (!navigator.onLine) { SYNC.state = "offline"; refreshLists(); return Promise.resolve(); }
+  syncing = (async () => {
+    try {
+      /* 1 · outbox: voice messages first, then the report itself */
+      for (const id of DB.outbox.slice()) {
+        const r = DB.reports.find(x => x.id === id);
+        if (!r || r.status !== "sent") { DB.outbox = DB.outbox.filter(x => x !== id); continue; }
+        r.up = r.up || {};
+        for (const c of clipsOf(r.data)) {
+          if (r.up[c.id]) continue;
+          const b = await IDB.get(c.id).catch(() => null); if (!b) { r.up[c.id] = "missing"; continue; }
+          const res = await api("clips/" + c.id, { method: "PUT", headers: { "content-type": (b.type || "audio/webm").split(";")[0] }, body: b });
+          if (!res.ok) throw Object.assign(new Error("clip"), { status: res.status });
+          r.up[c.id] = 1; persist();
+        }
+        const { up, ...body } = r;
+        const res = await api("reports", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reports: [body] }) });
+        if (!res.ok) throw Object.assign(new Error("report"), { status: res.status });
+        DB.outbox = DB.outbox.filter(x => x !== id); persist();
+      }
+      /* 2 · team: everything new since the last pull, for my site (keepers: my zone) */
+      const sc = teamScope(), key = sc.site + "|" + (sc.zone || "*");
+      if (DB.teamKey !== key) { DB.team = []; DB.teamAt = 0; DB.teamKey = key; }
+      const res = await api(`reports?site=${sc.site}${sc.zone ? "&zone=" + sc.zone : ""}&since=${Math.max(0, (DB.teamAt || 0) - 60000)}`);
+      if (!res.ok) throw Object.assign(new Error("pull"), { status: res.status });
+      const j = await res.json(), byId = {};
+      DB.team.forEach(r => byId[r.id] = r);
+      j.reports.forEach(r => { if (r.by !== me().uid) byId[r.id] = r; });
+      const keepFrom = dayKey(new Date(Date.now() - 3 * 864e5));
+      DB.team = Object.values(byId).filter(r => r.date >= keepFrom).sort((a, b) => (b.sentAt || 0) - (a.sentAt || 0));
+      DB.teamAt = j.now; persist();
+      SYNC = { state: "ok", at: Date.now() };
+      if (manual) toast("Up to date");
+    } catch (e) {
+      SYNC.state = e.status === 401 ? "locked" : navigator.onLine ? "error" : "offline";
+      if (manual && SYNC.state === "error") toast("Could not reach the team. Your reports are safe on this phone.");
+    } finally { syncing = null; refreshLists(); }
+  })();
+  return syncing;
+}
+function refreshLists() {   /* redraw list screens with fresh data, never while someone is typing or a sheet is open */
+  const a = document.activeElement, typing = a && /INPUT|TEXTAREA/.test(a.tagName);
+  if (["home", "team", "history"].includes(VIEW.name) && $("scrim").hidden && !typing) render();
+}
+if (API) {
+  setInterval(() => { if (document.visibilityState === "visible") sync(); }, 20000);
+  addEventListener("online", () => sync());
+  addEventListener("offline", () => { SYNC.state = "offline"; refreshLists(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sync(); });
+}
+
+/* ---------- team: flagged first, who still owes a daily report, everything sent ---------- */
+function renderTeam() {
+  const sc = teamScope(), day = TEAMDAY || TODAY();
+  const list = DB.team.filter(r => r.date === day && r.site === sc.site && (!sc.zone || r.zone === sc.zone));
+  const flagged = list.map(r => [r, flagsOf(r)]).filter(x => x[1].length).sort((a, b) => b[1].length - a[1].length);
+  const people = ANTS.staff.filter(p => p.site === sc.site && p.uid !== me().uid && (!sc.zone || p.zone === sc.zone));
+  const st = SYNC.state, ago = SYNC.at ? new Date(SYNC.at).toTimeString().slice(0, 5) : "";
+  const status = !API ? "Open the hosted app to see your team" : st === "ok" ? `Live · updated ${ago}` : st === "offline" ? `No signal · showing the last update${DB.teamAt ? " from " + new Date(DB.teamAt).toTimeString().slice(0, 5) : ""}`
+    : st === "locked" ? "Team code needed" : st === "error" ? "Could not reach the team" : "Connecting…";
+  const row = (r, fl) => { const F = FORMS[r.form], p = ANTS.staff.find(x => x.uid === r.by);
+    return `<button class="k-rowcard" data-a="teamView" data-v="${r.id}"><span class="k-rowcard__ico ${fl.length ? "k-rowcard__ico--bad" : "k-rowcard__ico--ok"}">${ico(fl.length ? "alert" : F.icon)}</span>
+      <span class="k-rowcard__main"><span class="k-rowcard__t t-minor-title">${esc(p ? p.name : r.by)}</span>
+        <span class="k-rowcard__meta t-body-regular quiet">${F.title}${subtitle(r) !== F.title ? " · " + esc(subtitle(r)) : ""} · ${r.sentAt ? new Date(r.sentAt).toTimeString().slice(0, 5) : ""}</span>
+        ${fl.length ? `<span class="t-body-medium" style="color:var(--md3-error)">${esc(fl.slice(0, 2).join(" · "))}${fl.length > 2 ? ` · +${fl.length - 2} more` : ""}</span>` : ""}</span>
+      <span class="k-rowcard__side">${ico("chev")}</span></button>`; };
+  const owed = people.map(p => { const forms = ROLES[p.role].forms.filter(f => FORMS[f].per === "day");
+    return [p, forms.map(f => [f, list.some(r => r.by === p.uid && r.form === f)])]; }).filter(x => x[1].length);
+  const days = [TODAY(), dayKey(new Date(Date.now() - 864e5))];
+  $("main").innerHTML = `<header class="k-ph"><div class="k-ph__main"><h1 class="t-major-title" style="color:var(--md3-on-surface)">Team</h1>
+      <p class="k-ph__line t-body-regular"><span>${esc(site(sc.site).name)}</span><span>${sc.zone ? esc(zoneOf(sc.site, sc.zone).name) : "All zones"}</span></p></div>
+      ${API ? `<button class="k-btn t-body-medium" data-a="syncNow" aria-label="Refresh">${ico("hist", "svg--sm")}Refresh</button>` : ""}</header>
+    <div class="gap24">
+      <div class="bar-tools"><span class="k-pill ${st === "ok" ? "k-pill--ok" : st === "locked" || st === "error" ? "k-pill--bad" : "k-pill--warn"} t-body-medium">${esc(status)}</span>
+        <div class="k-seg" role="tablist">${days.map(d => `<button class="k-seg__b t-body-medium ${d === day ? "is-on" : ""}" data-a="teamDay" data-v="${d}" aria-selected="${d === day}">${fmtDay(d)}</button>`).join("")}</div></div>
+      ${st === "locked" ? `<section class="k-card k-card--pad stack"><p class="t-minor-title">Enter your team code</p><p class="t-body-regular quiet">Your supervisor has it. You only need to enter it once on this phone.</p>
+        <div class="txtrow"><input id="teamCode" class="k-inp t-minor-regular" autocomplete="off" autocapitalize="off" placeholder="Team code" value="${esc(DB.code || "")}"><button class="k-btn k-btn--primary t-body-medium" style="width:auto;padding:0 16px" data-a="setCode">Save</button></div></section>` : ""}
+      ${!API ? `<div class="k-empty">${ico("users")}<p class="t-minor-medium">Team view needs the hosted app</p><p class="t-body-regular quiet">Open the app from its web link to send reports to your team and see theirs.</p></div>` : `
+      ${flagged.length ? `<section><div class="sec-h"><h2 class="t-minor-title" style="color:var(--md3-error)">Needs attention · ${flagged.length}</h2></div><div class="stack">${flagged.map(([r, fl]) => row(r, fl)).join("")}</div></section>` : ""}
+      ${owed.length ? `<section><div class="sec-h"><h2 class="t-minor-title">Daily reports</h2><span class="t-body-regular quiet">${owed.reduce((n, x) => n + x[1].filter(y => y[1]).length, 0)} of ${owed.reduce((n, x) => n + x[1].length, 0)} sent</span></div>
+        <div class="k-card">${owed.map(([p, fs]) => `<div class="owe-row"><span class="avatar t-subtext-title">${initials(p.name)}</span>
+          <span class="owe-row__who t-body-medium">${esc(p.name)}<span class="t-subtext-regular quiet" style="display:block">${ROLES[p.role].l} · ${esc(zoneOf(p.site, p.zone).name)}</span></span>
+          <span class="k-choice" style="gap:4px">${fs.map(([f, ok]) => `<span class="k-pill ${ok ? "k-pill--ok" : ""} t-subtext-title">${ok ? ico("check", "svg--sm") : ""}${FORMS[f].title.replace(/ (report|log|round)$/i, "")}</span>`).join("")}</span></div>`).join("")}</div></section>` : ""}
+      <section><div class="sec-h"><h2 class="t-minor-title">All sent reports</h2><span class="t-body-regular quiet">${list.length}</span></div>
+        ${list.length ? `<div class="stack">${list.map(r => row(r, flagsOf(r))).join("")}</div>` : `<div class="k-empty">${ico("users")}<p class="t-minor-medium">Nothing sent ${day === TODAY() ? "yet today" : "that day"}</p><p class="t-body-regular quiet">Reports appear here as soon as your team sends them.</p></div>`}</section>`}
+    </div>`;
+  $("bar").innerHTML = tabbar("team");
+}
+let TEAMDAY = null;
+
+/* =====================================================================
+   SHARE — WhatsApp-friendly plain text
+   ===================================================================== */
+function reportText(r) { return withR(r, () => reportTextIn(r)); }
+function reportTextIn(r) {
+  const F = FORMS[r.form], by = ANTS.staff.find(s => s.uid === r.by), flags = flagsIn(F, r.data);
+  const tmp = document.createElement("div"); tmp.innerHTML = summaryHTML(r);
+  const lines = [`*${F.title}*`, `${fmtDay(r.date)} · ${by ? by.name : r.by} · ${site(r.site).name} / ${zoneOf(r.site, r.zone).name}`, ""];
+  if (flags.length) lines.push(`⚠ *${flags.length} flag${flags.length > 1 ? "s" : ""}*`, ...flags.map(f => "• " + f), "");
+  tmp.querySelectorAll(".sum-sec").forEach(sec => {
+    lines.push(`*${sec.querySelector("h3").textContent}*`);
+    sec.querySelectorAll(".k-kv").forEach(kv => { const head = kv.closest(".sum-item") && kv.parentElement.querySelector("p"); if (head) lines.push(`_${head.textContent}_`);
+      const dt = kv.querySelectorAll("dt"), dd = kv.querySelectorAll("dd"); dt.forEach((t, i) => { if (dd[i].textContent !== "—") lines.push(`${t.textContent}: ${dd[i].textContent}`); }); });
+    lines.push("");
+  });
+  return lines.join("\n").trim();
+}
+let SHARE = { id: null, files: [] };
+async function prepareShare(r) {
+  SHARE = { id: r.id, files: [] };
+  const ext = t => t.includes("mp4") ? "m4a" : t.includes("ogg") ? "ogg" : "webm";
+  const files = await Promise.all(clipsOf(r.data).map(async (c, i) => { try { const b = await IDB.get(c.id); return b ? new File([b], `voice-${i + 1}.${ext(b.type)}`, { type: b.type }) : null; } catch (e) { return null; } }));
+  if (SHARE.id === r.id) SHARE.files = files.filter(Boolean);
+}
+async function copyText(t) { try { await navigator.clipboard.writeText(t); toast("Copied. Paste it in WhatsApp or email."); } catch (e) { toast("Could not copy on this device"); } }
+
+/* =====================================================================
+   EVENTS — one delegated handler
+   ===================================================================== */
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+const cur = () => report(VIEW.id);
+function save(r) { r.updated = Date.now(); persist(); }
+function fieldAt(r, p) {
+  const ks = p.split("/"); const F = FORMS[r.form]; const s = F.sections.find(x => x.k === ks[0]); let f = s.fields.find(x => x.k === ks[1]);
+  for (let i = 2; f && f.t === "group" && i + 1 < ks.length; i += 2) f = f.fields.find(x => x.k === ks[i + 1]);
+  return f;
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-a]"); if (!b || b.disabled) return;
+  const a = b.dataset.a, p = b.dataset.p, v = b.dataset.v, r = VIEW.id ? cur() : null;
+  switch (a) {
+    /* onboarding + navigation */
+    case "obRole": OB = { role: v, uid: null }; return renderOnboard();
+    case "obWho": OB.uid = v; OB.zone = null; return renderOnboard();
+    case "obZone": OB.zone = v; return renderOnboard();
+    case "obGo": { const s = ANTS.staff.find(x => x.uid === OB.uid); DB.me = { uid: s.uid, role: s.role, site: s.site, zone: OB.zone || s.zone }; persist(); return go({ name: "home" }); }
+    case "go": return go({ name: v });
+    case "new": { const F = FORMS[v]; const ex = F.per === "day" && todays(v)[0]; const rr = ex || newReport(v); return go({ name: ex && ex.status === "sent" ? "review" : "form", id: rr.id, step: 0 }); }
+    case "open": { const rr = report(v); return go({ name: rr.status === "sent" ? "review" : "form", id: v, step: 0 }); }
+    case "view": { const rr = report(v); return go({ name: rr.status === "sent" ? "review" : "form", id: v, step: 0, from: "history" }); }
+    case "teamView": return go({ name: "review", id: v, from: "team" });
+    case "setCode": { const el = $("teamCode"); DB.code = (el && el.value || "").trim(); persist(); SYNC.state = "busy"; render(); return sync(); }
+    case "syncNow": return sync(true);
+    case "teamDay": TEAMDAY = v; return renderTeam();
+    case "step": stopVoice(); VIEW = { name: "form", id: VIEW.id, step: +v, tried: VIEW.tried }; render(); return window.scrollTo(0, 0);
+    case "fix": stopVoice(); VIEW = { name: "form", id: VIEW.id, step: +v, tried: true }; render(); return window.scrollTo(0, 0);
+    case "review": stopVoice(); VIEW = { name: "review", id: v, tried: true }; render(); return window.scrollTo(0, 0);
+    case "send": { const F = FORMS[r.form]; if (missingIn(F, r.data).length) return; r.status = "sent"; r.sentAt = Date.now(); save(r);
+      const fl = flagsIn(F, r.data).length;
+      if (API) { if (!DB.outbox.includes(r.id)) DB.outbox.push(r.id); persist(); sync(); }
+      toast(!API ? (fl ? `Saved. ${fl} flag${fl > 1 ? "s" : ""} raised.` : "Report saved")
+        : navigator.onLine ? (fl ? `Sending. ${fl} flag${fl > 1 ? "s" : ""} raised for your supervisor.` : "Sending to your team")
+        : "No signal. It will send by itself when you're back in range.");
+      return go({ name: "review", id: r.id }); }
+    case "discard": if (confirm("Discard this draft? This cannot be undone.")) { clipsOf(report(v).data).forEach(c => IDB.del(c.id)); DB.reports = DB.reports.filter(x => x.id !== v); persist(); toast("Draft discarded"); go({ name: "home" }); } return;
+    case "share": { const t = reportText(report(v)); if (!navigator.share) return copyText(t);
+      const data = { title: FORMS[report(v).form].title, text: t }, files = SHARE.id === v ? SHARE.files : [];
+      if (files.length && navigator.canShare && navigator.canShare({ files })) data.files = files;
+      try { await navigator.share(data); } catch (err) {} return; }
+    case "copy": return copyText(reportText(report(v)));
+    case "setZone": DB.me.zone = v; persist(); toast("Zone changed"); return render();
+    case "signout": DB.me = null; OB = { role: null, uid: null }; persist(); return render();
+    case "wipe": if (confirm("Delete every report saved on this device?")) { DB.reports.forEach(x => clipsOf(x.data).forEach(c => IDB.del(c.id))); DB.reports = []; DB.outbox = []; persist(); toast("All reports cleared"); render(); } return;
+
+    /* answers */
+    case "seg": { const old = getP(r.data, p); setP(r.data, p, old === v ? undefined : v); save(r); return renderForm(); }
+    case "multi": case "phrase": {
+      const path = a === "phrase" ? p + "/p" : p; const arr = (getP(r.data, path) || []).slice(); const i = arr.indexOf(v);
+      if (i >= 0) arr.splice(i, 1); else { if (v === "None" || v === "Normal") arr.length = 0; else { ["None", "Normal"].forEach(x => { const j = arr.indexOf(x); if (j >= 0) arr.splice(j, 1); }); } arr.push(v); }
+      setP(r.data, path, arr); save(r); return renderForm(); }
+    case "check": setP(r.data, p, !getP(r.data, p)); save(r); return renderForm();
+    case "task": setP(r.data, p, getP(r.data, p) ? undefined : nowHM()); save(r); return renderForm();
+    case "now": setP(r.data, p, nowHM()); save(r); toast("Time set to now"); return renderForm();
+    case "num": { const f = fieldAt(r, p); const n = Math.max(f.min || 0, (+getP(r.data, p) || 0) + (+v)); setP(r.data, p, n); save(r); return renderForm(); }
+    case "rec": return startRec(p);
+    case "recStop": return stopRec();
+    case "dict": return startDict(p, b.dataset.note);
+    case "clipDel": { if (!confirm("Delete this voice message?")) return; const cl = (getP(r.data, p + "/clips") || []).filter(c => c.id !== v); setP(r.data, p + "/clips", cl); save(r); IDB.del(v); return renderForm(); }
+    case "openTxt": setP(r.data, p + "/open", true); save(r); renderForm(); { const t = document.querySelector(`textarea[data-p="${p}/txt"]`); if (t) t.focus(); } return;
+    case "allOk": { for (let i = 0; i < +v; i++) if (!getP(r.data, p + "/" + i)) setP(r.data, p + "/" + i, "OK"); save(r); return renderForm(); }
+    case "allNormal": { zoneAnimals().forEach(an => { const x = getP(r.data, p + "/" + an.id) || {}; if (!x.ate) x.ate = "All"; if (!x.h) x.h = "OK"; setP(r.data, p + "/" + an.id, x); }); save(r); toast("Unanswered animals marked normal"); return renderForm(); }
+    case "allPresent": { staffHere().forEach(s => { if (!getP(r.data, p + "/" + s.uid)) setP(r.data, p + "/" + s.uid, "Present"); }); save(r); return renderForm(); }
+    case "addItem": { const g = fieldAt(r, p); const arr = getP(r.data, p) || []; arr.push(seedItem(g)); setP(r.data, p, arr); save(r); renderForm();
+      const cards = document.querySelectorAll(".grp"); if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    case "delItem": { const arr = getP(r.data, p) || []; const g = fieldAt(r, p);
+      if (Object.keys(arr[+v] || {}).length > 1 && !confirm(`Remove ${g.item} ${+v + 1}?`)) return; arr.splice(+v, 1); save(r); return renderForm(); }
+
+    /* time sheet */
+    case "time": { const f = fieldAt(r, p); SHEET = { kind: "time", p, label: f.l, val: getP(r.data, p) || nowHM() }; return timeSheet(); }
+    case "tH": { const m = SHEET.val.split(":")[1]; SHEET.val = pad(v) + ":" + m; return timeSheet(); }
+    case "tM": { const h = SHEET.val.split(":")[0]; SHEET.val = h + ":" + pad(v); setP(r.data, SHEET.p, SHEET.val); save(r); closeSheet(); return renderForm(); }
+    case "tAgo": { const d = new Date(Date.now() - v * 6e4); SHEET.val = pad(d.getHours()) + ":" + pad(d.getMinutes()); setP(r.data, SHEET.p, SHEET.val); save(r); closeSheet(); return renderForm(); }
+    case "tDone": setP(r.data, SHEET.p, SHEET.val); save(r); closeSheet(); return renderForm();
+
+    /* list sheet */
+    case "pick": { const f = fieldAt(r, p); const cv = getP(r.data, p); SHEET = { kind: "pick", p, src: f.src, multi: !!f.multi, label: f.l, sel: f.multi ? (cv || []).slice() : cv ? [cv] : [] }; return pickSheet(); }
+    case "pickOne": if (SHEET.multi) { const i = SHEET.sel.indexOf(v); i >= 0 ? SHEET.sel.splice(i, 1) : SHEET.sel.push(v); const y = $("sheet").querySelector(".k-sheet__b").scrollTop; pickSheet(); $("sheet").querySelector(".k-sheet__b").scrollTop = y; return; }
+      setP(r.data, SHEET.p, v); save(r); closeSheet(); return renderForm();
+    case "pickClear": SHEET.sel = []; return pickSheet();
+    case "pickDone": setP(r.data, SHEET.p, SHEET.sel.slice()); save(r); closeSheet(); return renderForm();
+    case "sheetX": return closeSheet();
+  }
+});
+document.addEventListener("input", e => { const el = e.target; if (el.dataset.a !== "txt") return; const r = cur(); if (!r) return; setP(r.data, el.dataset.p, el.value); save(r); });
+
+render();
+sync();
+/* offline: when hosted (https), a service worker keeps the app and fonts on the phone so it opens with no signal */
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

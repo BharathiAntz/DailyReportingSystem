@@ -1,0 +1,9 @@
+# Cloudflare Pages project for the Daily Report System. setup.sh fills in database_id.
+name = "animal-drs"
+pages_build_output_dir = "site"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "animal-drs"
+database_id = "be04dc2b-7b1f-409f-ab95-aaf0846d5036"

@@ -1,9 +1,9 @@
 // Shared DRS data.
 // GET  /api/kv?since=<ms>   -> { now, items: [{k, v}] }  every key changed since, that I may read
-// POST /api/kv {k, v, prev} -> { ok, ts } | 409 { cur }  write if the stored value is still `prev` (else merge and retry)
+// POST /api/kv {k, v, prev} -> { ok, ts } | { conflict: true, cur }  write if the stored value is still `prev` (else merge and retry)
 // Keys: "@<SITE>/…" per site (only people whose scope includes the site), "@u:<uid>/…" personal (only that person),
 // anything else is organisation-wide. Admin settings may be written only by admins; read-only accounts write only their own keys.
-import { json, scopeSites } from "../_lib/auth.js";
+import { json, scopeSites, isOffice } from "../_lib/auth.js";
 
 const MAX = 900 * 1024;
 const ADMIN_KEYS = /^(kc-useradm|kc-settings)$/;
@@ -21,7 +21,7 @@ export async function onRequestGet({ request, env, data }) {
     `SELECT k, v FROM kv WHERE ts > ?1 AND ((site IS NULL AND uid IS NULL) OR uid = ?2 OR site IN (${marks})) ORDER BY ts LIMIT 5000`
   ).bind(since, s.uid, ...sites).all();
   /* cursor a little behind "now" so writes that land during this read are picked up next time */
-  return json({ now: now - 3000, items: results });
+  return json({ now: now - 3000, items: results, office: isOffice(request, env) });
 }
 
 export async function onRequestPost({ request, env, data }) {
@@ -36,7 +36,7 @@ export async function onRequestPost({ request, env, data }) {
   if (ro && !info.uid) return json({ error: "You have read-only access." }, 403);
   const cur = await env.DB.prepare("SELECT v FROM kv WHERE k = ?1").bind(k).first();
   const curV = cur ? cur.v : null;
-  if (curV !== prev && curV !== v) return json({ cur: curV }, 409);
+  if (curV !== prev && curV !== v) return json({ conflict: true, cur: curV });
   const ts = Date.now();
   await env.DB.prepare("INSERT INTO kv (k, v, ts, site, uid, by_uid) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT (k) DO UPDATE SET v = excluded.v, ts = excluded.ts, by_uid = excluded.by_uid")
     .bind(k, v, ts, info.site, info.uid, s.uid).run();

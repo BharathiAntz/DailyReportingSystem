@@ -17,5 +17,5 @@ export async function onRequestPost({ request, env }) {
   if (acc.status === "suspended") return json({ error: "Your DRS access is suspended. Please contact your admin." }, 403);
   await env.DB.prepare("UPDATE passkeys SET counter = ?2, last_used = ?3 WHERE id = ?1").bind(cred.id, v.authenticationInfo.newCounter, Date.now()).run();
   const token = await createSession(env, request, p.uid);
-  return json(await signedInReply(env, p), 200, { "set-cookie": sessionCookie(token) });
+  return json(await signedInReply(env, p, request), 200, { "set-cookie": sessionCookie(token) });
 }

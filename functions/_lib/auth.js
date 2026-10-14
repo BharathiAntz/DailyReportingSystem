@@ -56,8 +56,23 @@ export async function getSession(env, request) {
   if (Date.now() - s.last_seen > 3600e3) await env.DB.prepare("UPDATE sessions SET last_seen = ?2 WHERE token = ?1").bind(m[1], Date.now()).run();
   return { token: m[1], uid: s.uid, created: s.created, person: p, account: acc };
 }
-export const signedInReply = async (env, p) => {
+export const signedInReply = async (env, p, request) => {
   const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM passkeys WHERE uid = ?1").bind(p.uid).first();
-  return { uid: p.uid, name: p.name, role: p.role, site: p.site || scopeSites(p)[0] || "", passkeys: n ? n.n : 0 };
+  return { uid: p.uid, name: p.name, role: p.role, site: p.site || scopeSites(p)[0] || "", passkeys: n ? n.n : 0, office: request ? isOffice(request, env) : true };
 };
+/* office network: OFFICE_IPS = "203.0.113.7, 198.51.100.0/24, 2001:db8::1" (Pages env). Not set: every network counts as office. */
+function ip4(a) { const p = a.split("."); return p.length === 4 && p.every(x => /^\d{1,3}$/.test(x) && +x < 256) ? p.reduce((n, x) => (n << 8 >>> 0) + +x, 0) >>> 0 : null; }
+export function isOffice(request, env) {
+  const list = String(env.OFFICE_IPS || "").split(",").map(x => x.trim()).filter(Boolean);
+  if (!list.length) return true;
+  const ip = request.headers.get("cf-connecting-ip") || "";
+  return list.some(e => { if (!e.includes("/")) return e === ip;
+    const [net, bits] = e.split("/"), a = ip4(ip), n = ip4(net); if (a === null || n === null) return false;
+    const m = +bits === 0 ? 0 : (~0 << (32 - +bits)) >>> 0; return (a & m) === (n & m); });
+}
+/* roles that may use DRS only from the office network (Admin → Security settings; default Super Admin) */
+export async function officeOnlyRoles(env) {
+  const row = await env.DB.prepare("SELECT v FROM kv WHERE k = 'kc-settings'").first();
+  try { const s = JSON.parse(row ? row.v : "null"); return s && Array.isArray(s.officeOnly) ? s.officeOnly : ["sadmin"]; } catch (e) { return ["sadmin"]; }
+}
 export const rp = request => { const u = new URL(request.url); return { id: u.hostname, origin: u.origin }; };

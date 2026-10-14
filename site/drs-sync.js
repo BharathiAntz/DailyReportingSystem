@@ -78,11 +78,12 @@
     var it = queue.splice(ui > 0 ? ui : 0, 1)[0]; inflight = it.k;
     var put = function (v, base) {
       return api("kv", { method: "POST", body: JSON.stringify({ k: it.k, v: v, prev: base }) }).then(function (r) {
-        if (r.status === 409) return r.json().then(function (j) { var merged = merge3(it.prev, v, j.cur); it.prev = j.cur; return put(merged, j.cur); });
         if (r.status === 401) { authed = false; signedOut(); throw { code: "auth" }; }
         if (r.status === 403) return r.json().then(function (j) { banner("noWrite", j.error); throw { code: "forbidden" }; });
         if (!r.ok) throw { code: "http" + r.status };
-        return r.json().then(function (j) { if (v !== it.v && !queue.some(function (x) { return x.k === it.k; })) { cache[it.k] = v; changed = true; soon(); } if (j.ts) since = Math.max(since, 0); mirror(); });
+        return r.json().then(function (j) {
+          if (j.conflict) { var merged = merge3(it.prev, v, j.cur); it.prev = j.cur; return put(merged, j.cur); }
+          if (v !== it.v && !queue.some(function (x) { return x.k === it.k; })) { cache[it.k] = v; changed = true; soon(); } if (j.ts) since = Math.max(since, 0); mirror(); });
       });
     };
     put(it.v, it.prev).then(function () { banner(online ? "live" : "off"); })
@@ -107,6 +108,7 @@
         if (cache[x.k] !== x.v) { cache[x.k] = x.v; diff = true; if (URGENT.test(x.k)) urgent.push(x.k); }
       });
       since = j.now; mirror(); online = true; banner("live");
+      if (typeof j.office === "boolean") try { LS.setItem("drs-office-net", JSON.stringify(j.office)); } catch (e) {}
       if (j.user) applyUser(j.user);
       if (first) { first = false; if (diff && !sessionStorage.getItem("drs2-booted")) { sessionStorage.setItem("drs2-booted", "1"); location.reload(); return; } }
       if (urgent.length && typeof window.DRS_URGENT === "function") { try { window.DRS_URGENT(urgent); } catch (e) {} }
@@ -138,6 +140,7 @@
   /* ---------- sign-in ---------- */
   function startSession(j) {
     signingIn = true;
+    try { LS.setItem("drs-office-net", JSON.stringify(j.office !== false)); } catch (e) {}
     dev.set("drs-user", JSON.stringify(j.uid)); dev.set("kc-role", JSON.stringify(j.role)); dev.set("drs-site", JSON.stringify(j.site));
     try { dev.set("drs-sess-" + j.uid, String(Date.now())); dev.set("drs-last-active", String(Date.now())); sessionStorage.removeItem("drs-signed-out"); sessionStorage.removeItem("drs2-booted"); } catch (e) {}
     /* a different person on this phone: start from a clean shared cache */

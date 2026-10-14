@@ -18,5 +18,5 @@ export async function onRequestPost({ request, env }) {
   if (acc.status === "suspended") return json({ error: "Your DRS access is suspended. Please contact your admin." }, 403);
   await env.DB.prepare("UPDATE users SET failed = 0, locked_until = 0 WHERE uid = ?1").bind(ep).run();
   const token = await createSession(env, request, ep);
-  return json({ ...(await signedInReply(env, p)), mustChange: !!u.must_change }, 200, { "set-cookie": sessionCookie(token) });
+  return json({ ...(await signedInReply(env, p, request)), mustChange: !!u.must_change }, 200, { "set-cookie": sessionCookie(token) });
 }

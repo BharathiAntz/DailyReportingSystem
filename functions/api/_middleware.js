@@ -1,6 +1,6 @@
 // /api: Lite reports (/api/reports, /api/clips) keep the team code; everything else needs a signed-in session,
 // except sign-in itself (/api/auth/*), which checks what it needs.
-import { getSession, json } from "../_lib/auth.js";
+import { getSession, json, isOffice, officeOnlyRoles } from "../_lib/auth.js";
 export { json };
 
 export async function onRequest(context) {
@@ -15,6 +15,7 @@ export async function onRequest(context) {
     if (path.startsWith("/api/auth/")) { data.session = await getSession(env, request); return await next(); }
     const s = await getSession(env, request);
     if (!s) return json({ error: "Please sign in again" }, 401);
+    if (!isOffice(request, env) && (await officeOnlyRoles(env)).includes(s.person.role)) return json({ error: "For security, DRS opens only from the office network for your role.", office: false }, 403);
     data.session = s;
     return await next();
   } catch (e) { return json({ error: "Server error" }, 500); }

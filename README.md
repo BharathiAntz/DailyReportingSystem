@@ -1,40 +1,42 @@
-# Daily Report System
+# DRS · Daily Report System
 
-Tap-first daily reporting for animal-facility field staff: keepers, supervisors, biologists, vets and curators.
-Built on the GRC v2 component look. Live at **https://animal-drs.pages.dev**.
+Daily reports, maintenance tickets, treatments, alerts and dashboards for animal facility teams.
+Live at **https://animal-drs.pages.dev** (the earlier tap-first app is at `/lite/`).
 
-## What it does
-- **Reports by role**: day keeper, night keeper, special duty, supervisor round, staff attendance, enclosure check, animal shifting, vet health report, curator review, and incidents for everyone.
-- **Almost no typing**: radio buttons for one choice, tick buttons for many, animals and enclosures picked from the zone, times set with Now or a tap grid.
-- **Notes by voice**: record a voice message or use speak-to-type. Typing stays where words are the data (medicine & dose, "Other" descriptions).
-- **Flags**: bad answers (an animal not eating, a broken lock, an injury) are flagged on review and on the Team screen.
-- **Works offline**: the app and drafts stay on the phone; sent reports wait for signal and go out by themselves.
-- **Team view**: flagged reports first, who still owes a daily report, every sent report with its voice messages.
+## Who uses it
+14 roles, each with its own screens: CEO/COO, Cluster Head, Super Admin, Site Admin, Site Manager, Curator,
+Assistant Curator, Biologist, Vet, Paravet, Facility Manager (AFM), Head Keeper/Supervisor, Keeper, and outside maintenance agencies.
+Feature specs: [docs/original-spec/](docs/original-spec/). Roadmap: [docs/PLAN.md](docs/PLAN.md).
+
+## Sign-in
+Employee number + PIN. Everyone starts with a one-time PIN and chooses their own at first sign-in.
+After that, face or fingerprint (passkeys) can replace the PIN on that phone. Super Admins and Site Admins
+reset PINs from Admin → person → Reset PIN. Five wrong PINs lock the account for 15 minutes.
 
 ## Layout
 | Path | What |
 |---|---|
-| `site/index.html` | The whole app (one file: HTML, CSS, JS) |
-| `site/sw.js`, `site/manifest.webmanifest`, icons | Offline cache and "Add to Home Screen" |
-| `site/_headers` | Allows the microphone on the page |
-| `functions/api/` | Cloudflare Pages Functions: `/api/reports`, `/api/clips/<id>`, team-code check |
-| `schema.sql` | D1 tables for reports and voice messages |
-| `wrangler.toml` | Cloudflare project and D1 binding |
-| `setup.sh` / `deploy.sh` | One-time Cloudflare setup / publish an update |
+| `site/app.js` | The DRS app (all roles and modules) |
+| `site/ants.js` | Organisation data: sites, zones, staff, animals (sample until the real ANTS connection) |
+| `site/drs-sync.js` | Connects the app to the server: shared data, sign-in, passkeys, media |
+| `site/index.html`, `sw.js`, `manifest.webmanifest`, `icons/` | Page, offline cache, install as app |
+| `functions/api/kv.js` | Shared data, scoped per site / person, three-way merge on conflicts |
+| `functions/api/auth/` | PIN sign-in, change PIN, admin reset, passkeys, sign-out |
+| `functions/api/media/` | Photos, video, voice |
+| `functions/_lib/` | Sessions, PIN hashing, scopes; `staff.js` is generated from `site/ants.js` |
+| `schema.sql` | Database tables (Cloudflare D1) |
+| `tools/` | `build-staff.mjs`, `issue-pins.mjs` |
+| `original/drs-original.html` | The original DRS, for reference |
 
 ## Run locally
 ```sh
+npm install
 npx wrangler@4 d1 execute animal-drs --local --file schema.sql
-npx wrangler@4 pages dev --binding TEAM_CODE=test
+node tools/build-staff.mjs && node tools/issue-pins.mjs
+npx wrangler@4 d1 execute animal-drs --local --file .secrets/pins.sql
+npx wrangler@4 pages dev
 ```
-Then open http://localhost:8788. Opening `site/index.html` directly also works, without the Team view.
+One-time PINs are in `.secrets/` (never committed).
 
 ## Deploy
-```sh
-./deploy.sh            # publishes site/ and functions/ to Cloudflare Pages
-```
-The API requires a team code, stored as the Pages secret `TEAM_CODE`
-(`npx wrangler@4 pages secret put TEAM_CODE --project-name animal-drs`). It is never committed.
-
-## Data
-Sites, animals and staff in `site/index.html` (`ANTS`) are sample data. In production the facility system (ANTS) supplies them through the same shape.
+`./setup.sh` once (database, tables, PINs), then `./deploy.sh` for every update.

@@ -46,7 +46,6 @@
   /* ---------- SAMPLE ANTS (demo only) ---------- */
   const CLUSTER_SIZES = [10, 9, 10, 8, 3];          /* sites per cluster: 2–10, not fixed */
   const FIRST = ["Ravi", "Amit", "Sunita", "Pooja", "Kiran", "Meena", "Rahul", "Neha", "Vikram", "Asha", "Suresh", "Kavita", "Manoj", "Divya", "Arjun", "Lata", "Imran", "Farah", "Joseph", "Anita", "Deepak", "Rekha", "Sanjay", "Priya", "Harish", "Geeta", "Naveen", "Sapna", "Rakesh", "Uma"];
-  const LAST = ["Patel", "Shah", "Rao", "Iyer", "Nair", "Joshi", "Desai", "Singh", "Menon", "Kumar", "Sharma", "Mehta", "Pillai", "Das", "Khan", "Reddy", "Gupta", "Bhatt", "Parmar", "Jadeja"];
   const SPECIES = [["Bengal tiger", 1, 3], ["Asian elephant", 1, 4], ["Indian leopard", 1, 2], ["Asiatic lion", 2, 4], ["Blackbuck", 6, 14], ["Spotted deer", 8, 20], ["Nilgai", 3, 8], ["Sloth bear", 1, 3], ["Gharial", 3, 8], ["Mugger crocodile", 2, 6], ["Indian rhinoceros", 1, 2], ["Sarus crane", 2, 4], ["Indian star tortoise", 6, 20], ["Hoolock gibbon", 2, 4], ["Lion-tailed macaque", 4, 9], ["Red panda", 1, 3], ["Indian rock python", 1, 3], ["Striped hyena", 2, 4], ["Indian peafowl", 4, 10], ["Himalayan black bear", 1, 2]];
   const NAMES = ["Raja", "Rani", "Moti", "Shera", "Gauri", "Bholu", "Chinu", "Mira", "Tara", "Kali", "Sultan", "Leela", "Bijli", "Sheru", "Champa", "Badal", "Heera", "Juhi", "Kesar", "Laddu", "Munna", "Noor", "Pari", "Rocky", "Sona", "Toofan", "Veer", "Zara"];
   const BIG = ["Bengal tiger", "Asian elephant", "Indian leopard", "Asiatic lion", "Sloth bear", "Indian rhinoceros", "Red panda", "Himalayan black bear", "Hoolock gibbon", "Striped hyena"];
@@ -68,7 +67,7 @@
   function staff() {
     if (_staff) return _staff;
     const out = []; let ep = 1000;
-    const person = (seed, antsRole, extra) => { const r = rng(seed); ep++; const p = { uid: "EP" + ep, ep: "EP" + ep, name: pick(r, FIRST) + " " + pick(r, LAST), antsRole, role: ANTS_ROLE_MAP[antsRole], cluster: "", site: "", zone: "", ...extra }; out.push(p); return p; };
+    const person = (seed, antsRole, extra) => { const r = rng(seed); ep++; const p = { uid: "EP" + ep, ep: "EP" + ep, name: pick(r, FIRST), antsRole, role: ANTS_ROLE_MAP[antsRole], cluster: "", site: "", zone: "", ...extra }; out.push(p); return p; };
     person("ceo", "Chief Executive Officer", { title: "CEO" });
     person("coo", "Chief Operating Officer", { title: "COO" });
     person("sa1", "DRS Super Admin"); person("sa2", "DRS Super Admin");
@@ -3367,7 +3366,7 @@ const _renderNav2=renderNav;renderNav=function(){_renderNav2();if(VIEW==="cdash"
 const _addBadges0=addBadges;addBadges=function(){_addBadges0();if(ROLE==="mgr"){}};
 /* ---- 7. MAIN-APP LOGIN HOOK ----
    The main app can open DRS as  drs.html?role=sup&name=Ravi%20Patel&zone=Zone%204&lock=1
-   or send  window.postMessage({type:"drs-user",role:"vet",name:"Dr Shah",zone:"",lock:true}) after loading. */
+   or send  window.postMessage({type:"drs-user",role:"vet",name:"Dr Asha",zone:"",lock:true}) after loading. */
 const POST_TO_ROLE={keeper:"keeper","animal keeper":"keeper","site supervisor":"sup",supervisor:"sup","head animal keeper":"sup",biologist:"bio","senior biologist":"bio","assistant curator":"acur",curator:"cur","site curator":"cur",vet:"vet",veterinarian:"vet",paravet:"vet",afm:"afm",manager:"mgr","facility manager":"mgr","site manager":"mgr"};
 function applyUser(u){if(!u)return;const r=ROLES[u.role]?u.role:POST_TO_ROLE[String(u.role||u.post||"").toLowerCase()];if(!r)return;ROLE=r;store.set("kc-role",r);
  if(u.name){["kc-sup-name","kc-bio-name"].forEach(k=>store.set(k,u.name));Object.keys(FORMS).forEach(fk=>store.set(`kc-mem-${fk}-name`,u.name))}
@@ -3629,7 +3628,7 @@ let STAFF=store.get("kc-staff",[]),stEdit=null;const stSave=()=>store.set("kc-st
 const POSTS=OP(["Keeper","कीपर"],["Night keeper","नाइट कीपर"],["Senior keeper","सीनियर कीपर"],["Head Animal Keeper","हेड एनिमल कीपर"],["Site Supervisor","साइट सुपरवाइज़र"],["Kitchen staff","किचन स्टाफ"],["Cleaner","सफ़ाई कर्मी"],["Driver","ड्राइवर"],["Security","सुरक्षा"],["Other","अन्य"]);
 function rStaff(){const el=$("staffBody");if(!el)return;const canEdit=realRole()==="dop"||ROLE==="dop";
  el.innerHTML=`<p class="intro" style="margin-top:0">${t("staffP")}</p>${canEdit?`<button class="btn" id="stNew">${t("addStaff")}</button>`:""}<div id="stForm"></div>
- ${canEdit?`<details class="ecard" style="margin-top:12px"><summary><b>${t("pasteH")}</b></summary><p class="counter">${t("pasteP")}</p><textarea id="stPaste" placeholder="Ramesh Patel, EP1023, Keeper, Main site, Zone 4"></textarea><button class="btn ghost" id="stPasteGo" style="margin-top:8px">${t("pasteGo")}</button></details>`:""}
+ ${canEdit?`<details class="ecard" style="margin-top:12px"><summary><b>${t("pasteH")}</b></summary><p class="counter">${t("pasteP")}</p><textarea id="stPaste" placeholder="Ramesh, EP1023, Keeper, Main site, Zone 4"></textarea><button class="btn ghost" id="stPasteGo" style="margin-top:8px">${t("pasteGo")}</button></details>`:""}
  <p class="counter" style="margin-top:12px">${t("onRoll")}: ${STAFF.length}</p>
  ${STAFF.length?STAFF.slice().sort((a,b)=>(a.site+a.zone+a.name).localeCompare(b.site+b.zone+b.name)).map(s=>`<div class="act staffrow"><span><b>${esc(s.name)}</b> <small>${esc(s.ep)}</small><br><small>${esc(tv(s.post||""))} · ${esc(s.site||"-")} · ${esc(s.zone||"-")}${s.shift?" · "+esc(tv(s.shift)):""}</small></span>${canEdit?`<span style="display:flex;flex-direction:column;gap:4px"><button class="x" data-sted="${s.id}">${t("edit")}</button><button class="x" data-stdel="${s.id}">${t("del")}</button></span>`:""}</div>`).join(""):`<p class="empty">${t("noStaff")}</p>`}`;
  if(stEdit)rStForm()}

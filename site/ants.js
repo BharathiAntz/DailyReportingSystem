@@ -26,8 +26,8 @@
   const CLUSTERS = [["V1", "North cluster", 5], ["V2", "South cluster", 5]];
   const SITE_NAMES = { V1S1: "Lakeside Zoo", V1S2: "Hill Wildlife Park", V1S3: "Riverbank Rescue Centre", V1S4: "Forest Safari", V1S5: "City Aviary",
     V2S1: "Coastal Zoo", V2S2: "Grassland Reserve", V2S3: "Valley Breeding Centre", V2S4: "Desert Wildlife Park", V2S5: "Island Reptile House" };
-  const FIRST = ["Ravi", "Amit", "Sunita", "Pooja", "Kiran", "Meena", "Rahul", "Neha", "Vikram", "Asha", "Suresh", "Kavita", "Manoj", "Divya", "Arjun", "Lata", "Imran", "Farah", "Joseph", "Anita", "Deepak", "Rekha", "Sanjay", "Priya", "Harish", "Geeta", "Naveen", "Sapna", "Rakesh", "Uma"];
-  const LAST = ["Patel", "Shah", "Rao", "Iyer", "Nair", "Joshi", "Desai", "Singh", "Menon", "Kumar", "Sharma", "Mehta", "Pillai", "Das", "Khan", "Reddy", "Gupta", "Bhatt", "Parmar", "Jadeja"];
+  /* people are named by a single given name: no surnames, caste or family names. One name per person, never repeated. */
+  const GIVEN = ["Ravi", "Amit", "Sunita", "Pooja", "Kiran", "Meena", "Rahul", "Neha", "Vikram", "Asha", "Suresh", "Kavita", "Manoj", "Divya", "Arjun", "Lata", "Imran", "Farah", "Joseph", "Anita", "Deepak", "Rekha", "Sanjay", "Priya", "Harish", "Geeta", "Naveen", "Sapna", "Rakesh", "Uma", "Anil", "Bhavna", "Chetan", "Deepa", "Esha", "Faisal", "Gopal", "Hema", "Irfan", "Jaya", "Karthik", "Leela", "Mohan", "Nisha", "Omkar", "Padma", "Qasim", "Radha", "Salim", "Tanvi", "Uday", "Vani", "Waseem", "Yamini", "Zubin", "Aarti", "Bala", "Charu", "Dinesh", "Ganga", "Hari", "Indu", "Jatin", "Kamala"];
   const SPECIES = [["Bengal tiger", 1, 3], ["Asian elephant", 1, 4], ["Indian leopard", 1, 2], ["Asiatic lion", 2, 4], ["Blackbuck", 6, 14], ["Spotted deer", 8, 20], ["Nilgai", 3, 8], ["Sloth bear", 1, 3], ["Gharial", 3, 8], ["Mugger crocodile", 2, 6], ["Indian rhinoceros", 1, 2], ["Sarus crane", 2, 4], ["Indian star tortoise", 6, 20], ["Hoolock gibbon", 2, 4], ["Lion-tailed macaque", 4, 9], ["Red panda", 1, 3], ["Indian rock python", 1, 3], ["Striped hyena", 2, 4], ["Indian peafowl", 4, 10], ["Himalayan black bear", 1, 2]];
   const NAMES = ["Raja", "Rani", "Moti", "Shera", "Gauri", "Bholu", "Chinu", "Mira", "Tara", "Kali", "Sultan", "Leela", "Bijli", "Sheru", "Champa", "Badal", "Heera", "Juhi", "Kesar", "Laddu", "Munna", "Noor", "Pari", "Rocky", "Sona", "Toofan", "Veer", "Zara"];
   const BIG = ["Bengal tiger", "Asian elephant", "Indian leopard", "Asiatic lion", "Sloth bear", "Indian rhinoceros", "Red panda", "Himalayan black bear", "Hoolock gibbon", "Striped hyena"];
@@ -49,7 +49,7 @@
   function staff() {
     if (_staff) return _staff;
     const out = []; let ep = 1000;
-    const person = (seed, antsRole, extra) => { const r = rng(seed); ep++; const p = Object.assign({ uid: "EP" + ep, ep: "EP" + ep, name: pick(r, FIRST) + " " + pick(r, LAST), antsRole, role: ANTS_ROLE_MAP[antsRole], cluster: "", site: "", zone: "" }, extra); out.push(p); return p; };
+    const person = (seed, antsRole, extra) => { ep++; const p = Object.assign({ uid: "EP" + ep, ep: "EP" + ep, name: GIVEN[ep - 1001] || "Staff " + ep, antsRole, role: ANTS_ROLE_MAP[antsRole], cluster: "", site: "", zone: "" }, extra); out.push(p); return p; };
     person("ceo", "Chief Executive Officer", { title: "CEO" });
     person("coo", "Chief Operating Officer", { title: "COO" });
     person("sa1", "DRS Super Admin");

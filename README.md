@@ -8,6 +8,13 @@ Live at **https://animal-drs.pages.dev** (the earlier tap-first app is at `/lite
 Assistant Curator, Biologist, Vet, Paravet, Facility Manager (AFM), Head Keeper/Supervisor, Keeper, and outside maintenance agencies.
 Feature specs: [docs/original-spec/](docs/original-spec/). Roadmap: [docs/PLAN.md](docs/PLAN.md).
 
+## Demo mode (on now)
+Sign-in is off: the app opens straight in, and the **Demo** toolbar at the top switches to any role or person.
+Controlled by the Pages variable `DEMO_SWITCH` (`1` = on). **Turn it off before real staff use DRS**, and PIN sign-in applies again:
+```sh
+npx wrangler@4 pages secret delete DEMO_SWITCH --project-name animal-drs && ./deploy.sh
+```
+
 ## Sign-in
 Employee number + PIN. Everyone starts with a one-time PIN and chooses their own at first sign-in.
 After that, face or fingerprint (passkeys) can replace the PIN on that phone. Super Admins and Site Admins

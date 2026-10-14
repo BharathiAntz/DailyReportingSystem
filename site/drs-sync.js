@@ -146,13 +146,22 @@
     /* a different person on this phone: start from a clean shared cache */
     if (LS.getItem("drs2-owner") !== j.uid) { cache = {}; since = 0; queue = []; mirror(); saveQueue(); LS.setItem("drs2-owner", j.uid); }
   }
+  /* fetch the new person's data before the page reloads, so it opens complete (no second reload) */
+  function preload() {
+    return api("kv?since=0").then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j) return;
+      j.items.forEach(function (x) { cache[x.k] = x.v; });
+      since = j.now; mirror(); try { sessionStorage.setItem("drs2-booted", "1"); } catch (e) {}
+    }).catch(function () {});
+  }
   window.DRS_LOGIN = function (ep, pin) {
     return api("auth/login", { method: "POST", body: JSON.stringify({ ep: ep, pin: pin }) }).then(function (r) {
       return r.json().then(function (j) {
         if (!r.ok) { var m = document.getElementById("lgMsg"); if (m && j.error) setTimeout(function () { m.textContent = j.error; }, 0); return false; }
         startSession(j);
-        if (j.mustChange) return changePinSheet(true).then(function () { return offerPasskey(j); });
-        return offerPasskey(j);
+        var after = function () { return offerPasskey(j).then(function (ok) { return preload().then(function () { return ok; }); }); };
+        if (j.mustChange) return changePinSheet(true).then(after);
+        return after();
       });
     });
   };
@@ -179,7 +188,7 @@
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Not recognised"); return j; }); });
   }
   if (PK) {
-    window.DRS_PASSKEY_LOGIN = function () { return passkeyAuth(null).then(function (j) { startSession(j); return true; }); };
+    window.DRS_PASSKEY_LOGIN = function () { return passkeyAuth(null).then(function (j) { startSession(j); return preload(); }).then(function () { return true; }); };
     /* app lock: unlock with face or fingerprint, must be the signed-in person */
     window.DRS_BIOMETRIC = function () { return passkeyAuth(me()).then(function (j) { return j.uid === me(); }).catch(function () { return false; }); };
   }
@@ -256,6 +265,53 @@
 
   /* ---------- sign out on the server too ---------- */
   document.addEventListener("click", function (e) { if (e.target && e.target.id === "signOutBtn") { try { fetch("api/auth/logout", { method: "POST", credentials: "same-origin", keepalive: true }); } catch (x) {} LS.removeItem("drs2-owner"); } }, true);
+
+  /* ---------- demo mode: no sign-in; a toolbar at the top switches to any role or person ----------
+     Only while the server allows it (DEMO_SWITCH). Turned off: the toolbar goes and PIN sign-in applies again. */
+  var DEMO_KEY = "drs-demo-switch", LAST_KEY = "drs-demo-last", DEFAULT_UID = "EP1013";
+  var ROLE_ORDER = [["exec", "CEO / COO"], ["ch", "Cluster Head"], ["sadmin", "Super Admin"], ["siteadmin", "Site Admin"], ["mgr", "Site Manager"],
+    ["cur", "Curator"], ["acur", "Assistant Curator"], ["bio", "Biologist"], ["vet", "Vet"], ["pvet", "Paravet"], ["afm", "Facility Manager"],
+    ["sup", "Head Keeper / Supervisor"], ["keeper", "Keeper"], ["agency", "Maintenance agency"]];
+  var demoOn = LS.getItem(DEMO_KEY) === "1";
+  function people() { var seen = {}, out = []; (window.ANTS && window.ANTS.staff ? window.ANTS.staff() : []).forEach(function (p) { if (!seen[p.uid]) { seen[p.uid] = 1; out.push(p); } }); return out; }
+  function where(p) { return p.sites && p.sites.length > 1 ? "Cluster " + p.cluster + ", all sites" : p.site ? p.site + (p.zone ? " · " + p.zone : "") : p.role === "agency" ? "Agency" : p.cluster ? "Cluster " + p.cluster : "All sites"; }
+  function escH(x) { return String(x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function drawDemoBar() {
+    var bar = document.getElementById("drsDemoBar");
+    if (!bar) { bar = document.createElement("div"); bar.id = "drsDemoBar"; bar.className = "demobar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "Switch role");
+      document.body.insertBefore(bar, document.body.firstChild); }
+    var cur = me(), all = people(), curP = all.filter(function (p) { return p.uid === cur; })[0];
+    var role = bar.dataset.role || (curP ? curP.role : "sup"), list = all.filter(function (p) { return p.role === role; });
+    bar.innerHTML = '<span class="demobar__l">Demo</span>' +
+      '<select id="dbRole" aria-label="Role">' + ROLE_ORDER.map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === role ? " selected" : "") + ">" + r[1] + "</option>"; }).join("") + "</select>" +
+      '<select id="dbWho" aria-label="Person">' + list.map(function (p) { return '<option value="' + p.uid + '"' + (p.uid === cur ? " selected" : "") + ">" + escH(p.name) + " · " + escH(where(p)) + "</option>"; }).join("") + "</select>";
+  }
+  var switching = false;
+  function demoSwitch(uid) {
+    if (switching) return; switching = true;
+    var bar = document.getElementById("drsDemoBar"); if (bar) bar.classList.add("is-busy");
+    return api("auth/demo", { method: "POST", body: JSON.stringify({ uid: uid }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Could not switch"); return j; }); })
+      .then(function (j) { try { LS.setItem(LAST_KEY, j.uid); sessionStorage.removeItem("drs-view"); } catch (e) {} startSession(j); return preload(); })
+      .then(function () { location.reload(); })
+      .catch(function (e) { switching = false; if (bar) bar.classList.remove("is-busy"); var m = document.getElementById("toast"); if (m) { m.textContent = e.message; m.classList.add("on"); setTimeout(function () { m.classList.remove("on"); }, 3000); } });
+  }
+  document.addEventListener("change", function (e) {
+    if (e.target.id === "dbRole") {   /* a role: open its first person straight away; the second list picks someone else */
+      var first = people().filter(function (p) { return p.role === e.target.value; })[0];
+      document.getElementById("drsDemoBar").dataset.role = e.target.value; if (first) demoSwitch(first.uid);
+    }
+    if (e.target.id === "dbWho" && e.target.value && e.target.value !== me()) demoSwitch(e.target.value);
+  });
+  function setDemo(enabled) {
+    demoOn = enabled; try { LS.setItem(DEMO_KEY, enabled ? "1" : "0"); } catch (e) {}
+    var bar = document.getElementById("drsDemoBar");
+    if (!enabled) { if (bar) bar.remove(); return; }
+    if (!me()) { demoSwitch(LS.getItem(LAST_KEY) || DEFAULT_UID); return; }   /* no sign-in screen: open as the last person used */
+    if (document.body) drawDemoBar(); else document.addEventListener("DOMContentLoaded", drawDemoBar);
+  }
+  if (demoOn) setDemo(true);
+  fetch("api/auth/demo", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) { if (!!j.enabled !== demoOn || (j.enabled && !me())) setDemo(!!j.enabled); }).catch(function () {});
 
   /* ---------- run ---------- */
   window.DRS_FLUSH = flush;

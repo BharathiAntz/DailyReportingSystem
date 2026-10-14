@@ -755,3 +755,13 @@ nav{background:var(--paper);border-top:0;box-shadow:0 -1px 0 var(--line)}
 .pinbox{background:var(--surface);border-color:var(--gold-soft)}
 .wst span,.kpi span{font-size:11px;letter-spacing:.04em;line-height:1.3;display:block}
 .act.usr b,.feed .act b{color:var(--ink);font-size:16px}
+
+/* demo toolbar (C-27 list toolbar): edge to edge, 75% white, items radius 8. Shown only while role switching is on. */
+.demobar{position:relative;z-index:7;display:flex;align-items:center;gap:8px;padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top,0px));
+  background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line);font-size:14px}
+.demobar__l{flex:none;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--on-tertiary-soft);background:var(--tertiary-soft);border:1px solid var(--tertiary-container);border-radius:999px;padding:2px 10px}
+.demobar select{min-height:40px;height:40px;padding:0 28px 0 10px;font-size:14px;font-weight:500;flex:1 1 0;min-width:0;width:auto}
+.demobar #dbRole{color:var(--title);font-weight:600}
+.demobar.is-busy{opacity:.6;pointer-events:none}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .demobar{background:rgba(20,33,29,.85)}}
+:root[data-theme="dark"] .demobar{background:rgba(20,33,29,.85)}
